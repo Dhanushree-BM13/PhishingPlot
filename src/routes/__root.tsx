@@ -12,6 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "@/components/app-shell";
+import { DemoAlertNotifications } from "@/components/demo-alert-notifications";
+import { Toaster } from "@/components/ui/sonner";
 import { DemoStoreProvider } from "@/lib/store";
 
 function NotFoundComponent() {
@@ -127,7 +129,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <DemoStoreProvider>
+        <DemoAlertNotifications />
         <AppShell />
+        <Toaster closeButton position="top-right" />
       </DemoStoreProvider>
     </QueryClientProvider>
   );

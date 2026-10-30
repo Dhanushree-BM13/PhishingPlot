@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
@@ -12,12 +11,10 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { DemoScenarios, type DemoScenarioId } from "@/components/dashboard/demo-scenarios";
 import { IncidentTracker } from "@/components/dashboard/incident-tracker";
 import { deriveDemoAlerts } from "@/lib/demo-alerts";
 import { useDemoStore } from "@/lib/store";
-import { useReducedMotion } from "@/lib/motion";
 
 export const Route = createFileRoute("/_console/dashboard")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -35,35 +32,9 @@ export const Route = createFileRoute("/_console/dashboard")({
   component: Dashboard,
 });
 
-function AnimatedCount({ value }: { value: number }) {
-  const reducedMotion = useReducedMotion();
-  const [displayValue, setDisplayValue] = useState(reducedMotion ? value : 0);
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setDisplayValue(value);
-      return;
-    }
-
-    let frame = 0;
-    const started = performance.now();
-    const update = (now: number) => {
-      const progress = Math.min(1, (now - started) / 500);
-      setDisplayValue(Math.round(value * progress));
-      if (progress < 1) frame = requestAnimationFrame(update);
-    };
-    frame = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(frame);
-  }, [reducedMotion, value]);
-
-  return <span className="tabular-nums">{displayValue}</span>;
-}
-
 function Dashboard() {
   const { scenario } = Route.useSearch();
   const { incidents, approvals, auditEvents, elapsedMinutes } = useDemoStore();
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
 
   const counts = [
     { label: "Incidents total", value: incidents.length, icon: Clock3 },
@@ -121,13 +92,7 @@ function Dashboard() {
               <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
-              {hydrated ? (
-                <p className="text-3xl font-semibold tabular-nums">
-                  <AnimatedCount value={value} />
-                </p>
-              ) : (
-                <Skeleton className="h-9 w-16" />
-              )}
+              <p className="text-3xl font-semibold tabular-nums">{value}</p>
             </CardContent>
           </Card>
         ))}

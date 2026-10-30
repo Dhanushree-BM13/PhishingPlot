@@ -181,6 +181,11 @@
     animation: none !important;
   }
 
+  .toaster [data-sonner-toast] {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
   .showcase *,
   .showcase *::before,
   .showcase *::after {
