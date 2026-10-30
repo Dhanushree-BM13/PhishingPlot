@@ -113,6 +113,21 @@
   transform: none;
 }
 
+.tracker-row {
+  animation: tracker-row-enter 320ms ease-out both;
+}
+
+@keyframes tracker-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes route-enter {
   from {
     opacity: 0;
@@ -160,6 +175,10 @@
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+  }
+
+  .tracker-row {
+    animation: none !important;
   }
 
   .showcase *,

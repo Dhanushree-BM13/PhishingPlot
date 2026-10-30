@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Activity,
+  BellRing,
   ChevronLeft,
   ClipboardList,
   Clock3,
@@ -34,6 +35,7 @@ import { cn } from "@/lib/utils";
 const primaryNavigation = [
   { to: "/dashboard", title: "Dashboard", icon: LayoutDashboard },
   { to: "/incidents", title: "Incidents", icon: ClipboardList },
+  { to: "/alerts", title: "Alerts", icon: BellRing },
   { to: "/audit", title: "Audit", icon: FileClock },
   { to: "/settings", title: "Settings", icon: Settings },
 ] as const;
@@ -58,6 +60,7 @@ const routeTitles: Record<string, string> = {
   "/": "PHISHPILOT",
   "/dashboard": "Dashboard",
   "/incidents": "Incidents",
+  "/alerts": "Alerts",
   "/audit": "Audit log",
   "/settings": "Settings",
   "/hurdle/trusted-sender": "Trusted sender turns",

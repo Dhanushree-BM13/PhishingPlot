@@ -43,6 +43,9 @@ function IncidentDetail() {
   const hasDisagreement =
     incident.id === store.demoIncidents.analyzerDissent.id &&
     store.analyzerVerdictFixture.disagreement.detected;
+  const senderBaseline = store.additionalSenderBaselineFixtures.find(
+    (baseline) => baseline.senderAddress === incident.sender,
+  );
 
   return (
     <div className="space-y-6">
@@ -106,8 +109,24 @@ function IncidentDetail() {
             <p className="text-sm text-muted-foreground">
               {incident.id === store.demoIncidents.linkDrift.id
                 ? store.linkObservationFixture.observations[0].note
-                : store.analyzerVerdictFixture.disagreement.message}
+                : (incident.summary ?? store.analyzerVerdictFixture.disagreement.message)}
             </p>
+            {incident.evidence && (
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {incident.evidence.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            )}
+            {senderBaseline && (
+              <p className="text-xs text-muted-foreground">
+                Sender baseline: {senderBaseline.fixtureLabel} · {senderBaseline.sampleSize} samples
+                ·{" "}
+                {senderBaseline.knownLinkDomains.length
+                  ? `known domains: ${senderBaseline.knownLinkDomains.join(", ")}`
+                  : "no known link domains"}
+              </p>
+            )}
             {incident.id === store.demoIncidents.linkDrift.id && (
               <p className="text-xs text-muted-foreground">
                 Simulated local intelligence, not live scanning.

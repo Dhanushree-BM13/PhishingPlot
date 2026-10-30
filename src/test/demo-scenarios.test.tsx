@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { DemoScenarios } from "@/components/dashboard/demo-scenarios";
+import { deriveDemoAlerts } from "@/lib/demo-alerts";
 import { DemoStoreProvider, useDemoStore } from "@/lib/store";
 
 function StoreProbe() {
@@ -31,6 +32,16 @@ function StoreProbe() {
         }
       </p>
       <p>Recorded events: {store.auditEvents.length}</p>
+      <p>Sample incidents: {store.incidents.length}</p>
+      <p>Derived alerts: {deriveDemoAlerts(store.incidents, store.approvals).length}</p>
+      <p>
+        Credential approval state:{" "}
+        {store.approvals.find((approval) => approval.incidentId === "DEMO-CREDENTIAL-02")?.state}
+      </p>
+      <p>
+        Statement approval state:{" "}
+        {store.approvals.find((approval) => approval.incidentId === "DEMO-STATEMENT-03")?.state}
+      </p>
       <button
         onClick={() => {
           const approvalOffset =
@@ -103,7 +114,22 @@ describe("dashboard demo scenarios", () => {
 
     expect(screen.getByText("Approval state: invalidated")).toBeInTheDocument();
     expect(screen.getByText("Incident state: needs_rereview")).toBeInTheDocument();
-    expect(screen.getByText("Recorded events: 12")).toBeInTheDocument();
+    expect(screen.getByText("Recorded events: 22")).toBeInTheDocument();
+  });
+
+  it("loads the additional demo incidents with matching approvals", () => {
+    render(
+      <DemoStoreProvider>
+        <StoreProbe />
+      </DemoStoreProvider>,
+    );
+
+    expect(screen.getByText("Sample incidents: 8")).toBeInTheDocument();
+    expect(screen.getByText("Derived alerts: 8")).toBeInTheDocument();
+    expect(screen.getByText("Credential approval state: stale")).toBeInTheDocument();
+    expect(screen.getByText("Statement approval state: valid")).toBeInTheDocument();
+    expect(screen.getByText("Dissent incident state: escalated")).toBeInTheDocument();
+    expect(screen.getByText("Verdicts: HIGH 67, LOW 18, HIGH 82, HIGH 74")).toBeInTheDocument();
   });
 
   it("records justified decisions and resets them with the demo state", () => {

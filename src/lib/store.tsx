@@ -1,9 +1,13 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 import { approvalFixtures, type DemoApprovalFixture } from "@/data/demo/approvals";
-import { analyzerVerdictFixture } from "@/data/demo/analyzer-verdicts";
+import {
+  additionalIncidentVerdictFixtures,
+  analyzerVerdictFixture,
+} from "@/data/demo/analyzer-verdicts";
 import { auditEventsFixture } from "@/data/demo/audit-events";
 import {
+  additionalIncidentFixtures,
   demoDataLabel,
   demoIncidents,
   demoModeLabel,
@@ -11,7 +15,10 @@ import {
 } from "@/data/demo/incidents";
 import { demoFixtureSourceCount } from "@/data/demo/fixture-count";
 import { linkObservationFixture } from "@/data/demo/link-observations";
-import { senderBaselineFixture } from "@/data/demo/sender-baselines";
+import {
+  additionalSenderBaselineFixtures,
+  senderBaselineFixture,
+} from "@/data/demo/sender-baselines";
 import { scenarioVerdicts } from "@/data/demo/verdicts";
 import { trustedSenderCaseFixture } from "@/data/demo/trusted-sender-case";
 import type { ApprovalDecision, IncidentStatus, RiskLevel } from "@/lib/types";
@@ -27,6 +34,8 @@ export interface DemoIncident {
   status: IncidentStatus;
   risk: RiskLevel;
   riskScore: number;
+  summary?: string;
+  evidence?: string[];
 }
 
 export interface DemoAuditEvent {
@@ -68,6 +77,7 @@ export interface DemoStoreValue {
   linkObservationFixture: typeof linkObservationFixture;
   scenarioVerdicts: typeof scenarioVerdicts;
   senderBaselineFixture: typeof senderBaselineFixture;
+  additionalSenderBaselineFixtures: typeof additionalSenderBaselineFixtures;
   showcaseScenarioSteps: typeof showcaseScenarioSteps;
   trustedSenderCaseFixture: typeof trustedSenderCaseFixture;
   elapsedMinutes: number;
@@ -102,11 +112,20 @@ if (!riskReviewerVerdict) {
 }
 const riskReviewerScore = riskReviewerVerdict.score;
 
-const analyzerVerdicts = analyzerVerdictFixture.verdicts.map((verdict, index) => ({
-  ...verdict,
-  id: `DEMO-VERDICT-${index + 1}`,
-  incidentId: demoIncidents.analyzerDissent.id,
-}));
+const analyzerVerdicts = [
+  ...analyzerVerdictFixture.verdicts.map((verdict, index) => ({
+    ...verdict,
+    id: `DEMO-VERDICT-${index + 1}`,
+    incidentId: demoIncidents.analyzerDissent.id,
+  })),
+  ...additionalIncidentVerdictFixtures.flatMap((incidentFixture) =>
+    incidentFixture.verdicts.map((verdict, index) => ({
+      ...verdict,
+      id: `DEMO-VERDICT-${incidentFixture.incidentId}-${index + 1}`,
+      incidentId: incidentFixture.incidentId,
+    })),
+  ),
+];
 
 const approvalTtlMinutes =
   validLinkApproval?.decidedAt && validLinkApproval.expiresAt
@@ -183,13 +202,17 @@ function createInitialIncidents(): DemoIncident[] {
       risk: scenarioVerdicts.dissent[1].level,
       riskScore: riskReviewerScore,
     },
+    ...additionalIncidentFixtures.map((fixture) => ({
+      ...fixture,
+      reporter: "Demo analyst" as const,
+    })),
   ];
 }
 
 function createInitialAuditEvents(): DemoAuditEvent[] {
   return auditEventsFixture.events.map((event, index) => ({
     id: `DEMO-AUDIT-${index + 1}`,
-    incidentId: demoIncidents.analyzerDissent.id,
+    incidentId: event.incidentId ?? demoIncidents.analyzerDissent.id,
     offsetMinutes: event.offsetMinutes,
     timestamp: new Date(clockEpoch + event.offsetMinutes * 60_000).toISOString(),
     type: event.type,
@@ -507,6 +530,7 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
       linkObservationFixture,
       scenarioVerdicts,
       senderBaselineFixture,
+      additionalSenderBaselineFixtures,
       showcaseScenarioSteps,
       trustedSenderCaseFixture,
       elapsedMinutes,

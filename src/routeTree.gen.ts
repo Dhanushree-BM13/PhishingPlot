@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConsoleRouteImport } from './routes/_console'
+import { Route as ConsoleAlertsRouteImport } from './routes/_console.alerts'
 import { Route as ConsoleAuditRouteImport } from './routes/_console.audit'
 import { Route as ConsoleDashboardRouteImport } from './routes/_console.dashboard'
 import { Route as ConsoleIncidentsRouteImport } from './routes/_console.incidents'
@@ -27,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ConsoleAlertsRoute = ConsoleAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleAuditRoute = ConsoleAuditRouteImport.update({
   id: '/audit',
@@ -67,6 +73,7 @@ const ConsoleIncidentsIdRoute = ConsoleIncidentsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/alerts': typeof ConsoleAlertsRoute
   '/audit': typeof ConsoleAuditRoute
   '/dashboard': typeof ConsoleDashboardRoute
   '/incidents': typeof ConsoleIncidentsRouteWithChildren
@@ -77,6 +84,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/alerts': typeof ConsoleAlertsRoute
   '/audit': typeof ConsoleAuditRoute
   '/dashboard': typeof ConsoleDashboardRoute
   '/settings': typeof ConsoleSettingsRoute
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_console': typeof ConsoleRouteWithChildren
+  '/_console/alerts': typeof ConsoleAlertsRoute
   '/_console/audit': typeof ConsoleAuditRoute
   '/_console/dashboard': typeof ConsoleDashboardRoute
   '/_console/incidents': typeof ConsoleIncidentsRouteWithChildren
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/alerts'
     | '/audit'
     | '/dashboard'
     | '/incidents'
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/alerts'
     | '/audit'
     | '/dashboard'
     | '/settings'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_console'
+    | '/_console/alerts'
     | '/_console/audit'
     | '/_console/dashboard'
     | '/_console/incidents'
@@ -149,6 +161,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof ConsoleRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_console/alerts': {
+      id: '/_console/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof ConsoleAlertsRouteImport
+      parentRoute: typeof ConsoleRoute
     }
     '/_console/audit': {
       id: '/_console/audit'
@@ -216,6 +235,7 @@ const ConsoleIncidentsRouteWithChildren =
   ConsoleIncidentsRoute._addFileChildren(ConsoleIncidentsRouteChildren)
 
 interface ConsoleRouteChildren {
+  ConsoleAlertsRoute: typeof ConsoleAlertsRoute
   ConsoleAuditRoute: typeof ConsoleAuditRoute
   ConsoleDashboardRoute: typeof ConsoleDashboardRoute
   ConsoleIncidentsRoute: typeof ConsoleIncidentsRouteWithChildren
@@ -224,6 +244,7 @@ interface ConsoleRouteChildren {
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
+  ConsoleAlertsRoute: ConsoleAlertsRoute,
   ConsoleAuditRoute: ConsoleAuditRoute,
   ConsoleDashboardRoute: ConsoleDashboardRoute,
   ConsoleIncidentsRoute: ConsoleIncidentsRouteWithChildren,

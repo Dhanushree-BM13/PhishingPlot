@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, ShieldAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  BellRing,
+  CheckCircle2,
+  Clock3,
+  ShieldAlert,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DemoScenarios, type DemoScenarioId } from "@/components/dashboard/demo-scenarios";
+import { IncidentTracker } from "@/components/dashboard/incident-tracker";
+import { deriveDemoAlerts } from "@/lib/demo-alerts";
 import { useDemoStore } from "@/lib/store";
 import { useReducedMotion } from "@/lib/motion";
 
@@ -84,9 +93,8 @@ function Dashboard() {
     .filter((event) => event.offsetMinutes <= elapsedMinutes)
     .sort((a, b) => b.offsetMinutes - a.offsetMinutes)
     .slice(0, 5);
-  const attention = incidents.filter(
-    (incident) => incident.status === "escalated" || incident.status === "needs_rereview",
-  );
+  const alerts = deriveDemoAlerts(incidents, approvals);
+  const alertPreview = alerts.slice(0, 4);
 
   return (
     <div className="space-y-6">
@@ -157,39 +165,65 @@ function Dashboard() {
         </Card>
 
         <Card className="rounded-sm shadow-none">
-          <CardHeader className="border-b border-border px-4 py-3">
-            <CardTitle className="text-sm">Needs attention</CardTitle>
-            <p className="text-xs text-muted-foreground">Escalated or awaiting a fresh review.</p>
+          <CardHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <BellRing aria-hidden="true" className="size-4 text-status-escalated" />
+                Alert desk
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {alerts.length} fixture-derived alerts · not live monitoring
+              </p>
+            </div>
+            <Link
+              className="text-xs text-status-analysis underline-offset-4 hover:underline"
+              to="/alerts"
+            >
+              View all
+            </Link>
           </CardHeader>
           <CardContent className="p-0">
-            {attention.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground">No incidents need attention.</p>
+            {alertPreview.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">No active demo alerts.</p>
             ) : (
               <ul className="divide-y divide-border">
-                {attention.map((incident) => (
-                  <li key={incident.id}>
-                    <Link
-                      className="flex min-w-0 items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      params={{ id: incident.id }}
-                      to="/incidents/$id"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">
-                          {incident.subject}
+                {alertPreview.map((alert) => {
+                  const incident = incidents.find((item) => item.id === alert.incidentId);
+                  if (!incident) return null;
+                  return (
+                    <li key={alert.id}>
+                      <Link
+                        className="flex min-w-0 items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        params={{ id: alert.incidentId }}
+                        to="/incidents/$id"
+                      >
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2 truncate text-sm font-medium">
+                            <span
+                              className={
+                                alert.priority === "critical"
+                                  ? "size-1.5 shrink-0 rounded-full bg-status-invalid"
+                                  : "size-1.5 shrink-0 rounded-full bg-status-escalated"
+                              }
+                            />
+                            {alert.title}
+                          </span>
+                          <span className="mt-1 block truncate text-xs text-muted-foreground">
+                            {incident.id} · {alert.detail}
+                          </span>
                         </span>
-                        <span className="mt-1 block font-mono text-xs text-muted-foreground">
-                          {incident.id} · {incident.status.replaceAll("_", " ")}
-                        </span>
-                      </span>
-                      <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
-                    </Link>
-                  </li>
-                ))}
+                        <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <IncidentTracker />
 
       <Card className="rounded-sm shadow-none">
         <CardHeader className="border-b border-border px-4 py-3">

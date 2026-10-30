@@ -8,6 +8,96 @@ export interface ShowcaseIncidentFixture {
   risk: RiskLevel;
 }
 
+export interface AdditionalIncidentFixture extends ShowcaseIncidentFixture {
+  receivedAt: string;
+  riskScore: number;
+  summary: string;
+  evidence: string[];
+}
+
+export const additionalIncidentFixtures: AdditionalIncidentFixture[] = [
+  {
+    id: "DEMO-CREDENTIAL-02",
+    subject: "Review your shared workspace access",
+    sender: "helpdesk@collab.example",
+    status: "investigating",
+    risk: "medium",
+    riskScore: 56,
+    receivedAt: "2026-10-30T11:42:00Z",
+    summary:
+      "A simulated credential prompt uses an unfamiliar sign-in domain and needs analyst review.",
+    evidence: [
+      "Sender display name matches the expected help desk label.",
+      "Sign-in link uses the unfamiliar host access-collab.example.",
+      "The sender has not requested credentials in the baseline sample.",
+    ],
+  },
+  {
+    id: "DEMO-STATEMENT-03",
+    subject: "Your monthly statement is ready",
+    sender: "notices@statements.example",
+    status: "approved",
+    risk: "low",
+    riskScore: 12,
+    receivedAt: "2026-10-30T11:55:00Z",
+    summary:
+      "A low-risk sample notice follows the expected sender pattern and contains no unusual request.",
+    evidence: [
+      "Sender and reply-to addresses match the sample baseline.",
+      "Message contains no credential or payment request.",
+      "No attachment is present in this synthetic email.",
+    ],
+  },
+  {
+    id: "DEMO-ATTACHMENT-04",
+    subject: "Revised purchase order attached",
+    sender: "orders@vendor.example",
+    status: "new",
+    risk: "critical",
+    riskScore: 94,
+    receivedAt: "2026-10-30T11:48:00Z",
+    summary:
+      "A synthetic purchase-order message includes an unexpected macro-enabled document and urgent instructions.",
+    evidence: [
+      "Unexpected attachment type: application/vnd.ms-word.document.macroEnabled.12.",
+      "Urgent payment language is absent from the sample sender baseline.",
+      "Do not open or execute attachments; this fixture does not contain a real file.",
+    ],
+  },
+  {
+    id: "DEMO-IMPERSONATION-05",
+    subject: "Action required: confirm payroll account",
+    sender: "payroll@company-support.example",
+    status: "awaiting_approval",
+    risk: "high",
+    riskScore: 78,
+    receivedAt: "2026-10-30T11:51:00Z",
+    summary:
+      "A synthetic payroll notice uses a lookalike sender domain and asks the recipient to confirm account details.",
+    evidence: [
+      "Sender domain differs from the internal payroll baseline.",
+      "Message requests sensitive account confirmation.",
+      "Reply-to does not match the visible sender.",
+    ],
+  },
+  {
+    id: "DEMO-PAYROLL-06",
+    subject: "Urgent: release the revised payroll file",
+    sender: "finance@partner.example",
+    status: "rejected",
+    risk: "medium",
+    riskScore: 48,
+    receivedAt: "2026-10-30T11:38:00Z",
+    summary:
+      "A synthetic payment request was rejected after its urgency and new destination account deviated from prior messages.",
+    evidence: [
+      "Sender is known, but the message asks to use a new payment destination.",
+      "Urgency is unusual compared with the sender's sample history.",
+      "The demo rejection records an analyst decision only.",
+    ],
+  },
+];
+
 export const demoIncidents = {
   trustedSender: {
     id: "DEMO-TRUSTED-01",
