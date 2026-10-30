@@ -23,13 +23,49 @@ function StoreProbe() {
             ?.status
         }
       </p>
+      <p>
+        Dissent incident state:{" "}
+        {
+          store.incidents.find((incident) => incident.id === store.demoIncidents.analyzerDissent.id)
+            ?.status
+        }
+      </p>
       <p>Recorded events: {store.auditEvents.length}</p>
       <button
-        onClick={() => store.advanceSimulatedTime(store.linkObservationFixture.recheckAfterMinutes)}
+        onClick={() => {
+          const approvalOffset =
+            store.auditEventsFixture.events.find(
+              (event) => event.type === "Approval recorded · Valid",
+            )?.offsetMinutes ?? 0;
+          store.advanceSimulatedTime(
+            approvalOffset + store.linkObservationFixture.recheckAfterMinutes,
+          );
+        }}
         type="button"
       >
         Advance simulated time
       </button>
+      <button
+        onClick={() =>
+          store.recordDecision(
+            store.demoIncidents.analyzerDissent.id,
+            "approved",
+            "Reviewed the conflicting local evidence.",
+          )
+        }
+        type="button"
+      >
+        Approve with justification
+      </button>
+      <p>Latest decision: {store.decisions.at(-1)?.decision ?? "none"}</p>
+      <p>
+        Dissent approval state:{" "}
+        {
+          store.approvals.find(
+            (approval) => approval.incidentId === store.demoIncidents.analyzerDissent.id,
+          )?.state
+        }
+      </p>
       <p>
         Verdicts:{" "}
         {store.analyzerVerdictFixture.verdicts
@@ -53,7 +89,7 @@ describe("dashboard demo scenarios", () => {
     expect(
       screen.getByRole("heading", { name: "Walk through a demo scenario" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Approval state: valid")).toBeInTheDocument();
+    expect(screen.getByText("Dissent approval state: superseded")).toBeInTheDocument();
   });
 
   it("invalidates the link approval once the simulated fixture observation is reached", () => {
@@ -67,7 +103,21 @@ describe("dashboard demo scenarios", () => {
 
     expect(screen.getByText("Approval state: invalidated")).toBeInTheDocument();
     expect(screen.getByText("Incident state: needs_rereview")).toBeInTheDocument();
-    expect(screen.getByText("Recorded events: 9")).toBeInTheDocument();
+    expect(screen.getByText("Recorded events: 12")).toBeInTheDocument();
+  });
+
+  it("records justified decisions and resets them with the demo state", () => {
+    render(
+      <DemoStoreProvider>
+        <StoreProbe />
+      </DemoStoreProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve with justification" }));
+
+    expect(screen.getByText("Approval state: valid")).toBeInTheDocument();
+    expect(screen.getByText("Latest decision: approved")).toBeInTheDocument();
+    expect(screen.getByText("Dissent incident state: approved")).toBeInTheDocument();
   });
 
   it("keeps the dissenting fixture verdicts separate", () => {

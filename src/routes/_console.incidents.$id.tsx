@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ShieldAlert } from "lucide-react";
 
+import { ApprovalWorkflow } from "@/components/incidents/approval-workflow";
 import { BaselineCompare } from "@/components/hurdle/baseline-compare";
 import { EmailPreview } from "@/components/hurdle/email-preview";
 import { OutcomeBanner } from "@/components/hurdle/outcome-banner";
 import { SignalBars } from "@/components/hurdle/signal-bars";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +38,11 @@ function IncidentDetail() {
 
   const approval = store.approvals.find((entry) => entry.incidentId === incident.id);
   const audit = store.auditEvents.filter((event) => event.incidentId === incident.id);
+  const decision = [...store.decisions].reverse().find((entry) => entry.incidentId === incident.id);
   const trustedSender = incident.id === store.demoIncidents.trustedSender.id;
+  const hasDisagreement =
+    incident.id === store.demoIncidents.analyzerDissent.id &&
+    store.analyzerVerdictFixture.disagreement.detected;
 
   return (
     <div className="space-y-6">
@@ -46,6 +52,9 @@ function IncidentDetail() {
           <h1 className="mt-1 break-words text-2xl font-semibold">{incident.subject}</h1>
           <p className="mt-2 break-all font-mono text-sm text-muted-foreground">
             {incident.sender}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Received {store.formatSimulatedTime(incident.receivedAt)} · Demo analyst
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -61,6 +70,17 @@ function IncidentDetail() {
           </Badge>
         </div>
       </header>
+
+      {hasDisagreement && (
+        <Alert className="rounded-sm border-status-escalated/40 bg-status-escalated/5">
+          <AlertTriangle aria-hidden="true" className="size-4 text-status-escalated" />
+          <AlertTitle>Analysts disagree</AlertTitle>
+          <AlertDescription>
+            {store.analyzerVerdictFixture.disagreement.message} Approval requires a written
+            justification.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {trustedSender ? (
         <>
@@ -78,21 +98,6 @@ function IncidentDetail() {
               <OutcomeBanner demoIncidents={store.demoIncidents} />
             </div>
           </div>
-          <Card className="rounded-sm shadow-none">
-            <CardHeader className="border-b border-border p-4">
-              <CardTitle className="text-sm">Approval record</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 p-4 text-sm">
-              <p>State: {approval?.state ?? "No decision recorded"}</p>
-              <p className="break-all font-mono text-xs text-muted-foreground">
-                Fingerprint: {approval?.fingerprint ?? "Not recorded"}
-              </p>
-              <p>Approval records a decision only. No external action is executed.</p>
-              <p className="text-xs text-muted-foreground">
-                This view is read-only. Re-check and analyst decisions are not implemented yet.
-              </p>
-            </CardContent>
-          </Card>
         </>
       ) : (
         <Card className="rounded-sm shadow-none">
@@ -103,10 +108,11 @@ function IncidentDetail() {
                 ? store.linkObservationFixture.observations[0].note
                 : store.analyzerVerdictFixture.disagreement.message}
             </p>
-            <p className="text-sm">Current approval state: {approval?.state ?? "none"}</p>
-            <p className="text-xs text-muted-foreground">
-              Detailed evidence and review actions are not implemented for this scenario.
-            </p>
+            {incident.id === store.demoIncidents.linkDrift.id && (
+              <p className="text-xs text-muted-foreground">
+                Simulated local intelligence, not live scanning.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -132,6 +138,28 @@ function IncidentDetail() {
                   </p>
                 </div>
               ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {approval ? (
+        <ApprovalWorkflow
+          approval={approval}
+          decision={decision}
+          formatSimulatedTime={store.formatSimulatedTime}
+          incidentId={incident.id}
+          minimumJustificationLength={
+            store.demoIncidents.analyzerDissent.minimumJustificationLength
+          }
+          onRecordDecision={store.recordDecision}
+          onRecheck={store.recheckIncident}
+          requiresJustification={hasDisagreement}
+          simulatedTime={store.simulatedTime}
+        />
+      ) : (
+        <Card className="rounded-sm shadow-none">
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            No approval fixture is available for this incident.
           </CardContent>
         </Card>
       )}

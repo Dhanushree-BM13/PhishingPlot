@@ -14,7 +14,7 @@ import { linkObservationFixture } from "@/data/demo/link-observations";
 import { senderBaselineFixture } from "@/data/demo/sender-baselines";
 import { scenarioVerdicts } from "@/data/demo/verdicts";
 import { trustedSenderCaseFixture } from "@/data/demo/trusted-sender-case";
-import type { IncidentStatus, RiskLevel } from "@/lib/types";
+import type { ApprovalDecision, IncidentStatus, RiskLevel } from "@/lib/types";
 
 const clockEpoch = Date.parse(auditEventsFixture.simulatedClock);
 
@@ -39,9 +39,19 @@ export interface DemoAuditEvent {
   actor: "Demo analyst";
 }
 
+export interface DemoDecision {
+  id: string;
+  incidentId: string;
+  decision: ApprovalDecision;
+  justification: string;
+  decidedAt: string;
+  fingerprint: string;
+}
+
 export interface DemoStoreValue {
   incidents: DemoIncident[];
   approvals: DemoApprovalFixture[];
+  decisions: DemoDecision[];
   analyzerVerdictFixture: typeof analyzerVerdictFixture;
   analyzerVerdicts: typeof analyzerVerdicts;
   auditEvents: DemoAuditEvent[];
@@ -64,6 +74,8 @@ export interface DemoStoreValue {
   simulatedTime: Date;
   formatSimulatedTime: (timestamp: string) => string;
   advanceSimulatedTime: (minutes: number) => void;
+  recordDecision: (incidentId: string, decision: ApprovalDecision, justification?: string) => void;
+  recheckIncident: (incidentId: string) => { changed: boolean; fingerprint: string };
   resetDemo: () => void;
 }
 
@@ -78,6 +90,10 @@ if (!linkRecheckEventFixture) {
   throw new Error("The demo audit fixture must include its link re-check event.");
 }
 const linkRecheckEventType = linkRecheckEventFixture.type;
+const approvalRecordedOffset =
+  auditEventsFixture.events.find((event) => event.type === "Approval recorded · Valid")
+    ?.offsetMinutes ?? 0;
+const linkRecheckOffset = approvalRecordedOffset + linkObservationFixture.recheckAfterMinutes;
 const riskReviewerVerdict = analyzerVerdictFixture.verdicts.find(
   (verdict) => verdict.analyzerId === "risk_reviewer",
 );
@@ -106,6 +122,33 @@ function formatSimulatedTime(timestamp: string) {
     timeStyle: "short",
     timeZone: "UTC",
   }).format(new Date(timestamp));
+}
+
+function fingerprintFor(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `demo-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+function createActionEvent(
+  incidentId: string,
+  offsetMinutes: number,
+  type: string,
+  detail: string,
+  id: string,
+): DemoAuditEvent {
+  return {
+    id,
+    incidentId,
+    offsetMinutes,
+    timestamp: new Date(clockEpoch + offsetMinutes * 60_000).toISOString(),
+    type,
+    detail,
+    actor: "Demo analyst",
+  };
 }
 
 function createInitialIncidents(): DemoIncident[] {
@@ -159,7 +202,174 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [incidents, setIncidents] = useState(createInitialIncidents);
   const [approvals, setApprovals] = useState(approvalFixtures);
+  const [decisions, setDecisions] = useState<DemoDecision[]>([]);
   const [auditEvents, setAuditEvents] = useState(createInitialAuditEvents);
+
+  const recordDecision = useCallback(
+    (incidentId: string, decision: ApprovalDecision, justification = "") => {
+      const incident = incidents.find((item) => item.id === incidentId);
+      if (!incident) throw new Error(`No demo incident exists for ${incidentId}.`);
+      const approval = approvals.find((item) => item.incidentId === incidentId);
+      if (!approval) throw new Error(`No demo approval exists for incident ${incidentId}.`);
+
+      const trimmedJustification = justification.trim();
+      if (
+        incidentId === demoIncidents.analyzerDissent.id &&
+        decision === "approved" &&
+        trimmedJustification.length < demoIncidents.analyzerDissent.minimumJustificationLength
+      ) {
+        throw new RangeError(
+          `Approval requires at least ${demoIncidents.analyzerDissent.minimumJustificationLength} characters of justification.`,
+        );
+      }
+
+      const timestamp = new Date(clockEpoch + elapsedMinutes * 60_000).toISOString();
+      const fingerprint = fingerprintFor(
+        `${incidentId}|${incident.risk}|${incident.riskScore}|${trimmedJustification}`,
+      );
+      const nextDecision: DemoDecision = {
+        id: `DEMO-DECISION-${decisions.length + 1}`,
+        incidentId,
+        decision,
+        justification: trimmedJustification,
+        decidedAt: timestamp,
+        fingerprint,
+      };
+
+      setDecisions((current) => [...current, nextDecision]);
+      setIncidents((current) =>
+        current.map((item) =>
+          item.id === incidentId
+            ? { ...item, status: decision === "approved" ? "approved" : "rejected" }
+            : item,
+        ),
+      );
+      setApprovals((current) =>
+        current.map((item) =>
+          item.incidentId === incidentId
+            ? {
+                ...item,
+                state: decision === "approved" ? "valid" : "superseded",
+                decidedAt: timestamp,
+                expiresAt: new Date(
+                  Date.parse(timestamp) + (approvalTtlMinutes ?? 120) * 60_000,
+                ).toISOString(),
+                fingerprint,
+              }
+            : item,
+        ),
+      );
+      setAuditEvents((current) => {
+        const events: DemoAuditEvent[] = [];
+        if (trimmedJustification) {
+          events.push(
+            createActionEvent(
+              incidentId,
+              elapsedMinutes,
+              "Justification saved",
+              `The analyst recorded a ${trimmedJustification.length}-character justification.`,
+              `DEMO-AUDIT-DECISION-${decisions.length + 1}-JUSTIFICATION`,
+            ),
+          );
+        }
+        events.push(
+          createActionEvent(
+            incidentId,
+            elapsedMinutes,
+            decision === "approved" ? "Approval recorded · Valid" : "Rejection recorded",
+            decision === "approved"
+              ? "The analyst decision was recorded against the current evidence."
+              : "The analyst rejected the proposed action. No external action was executed.",
+            `DEMO-AUDIT-DECISION-${decisions.length + 1}`,
+          ),
+        );
+        return [...current, ...events];
+      });
+    },
+    [approvals, decisions.length, elapsedMinutes, incidents],
+  );
+
+  const recheckIncident = useCallback(
+    (incidentId: string) => {
+      const approval = approvals.find((item) => item.incidentId === incidentId);
+      if (!approval) throw new Error(`No demo approval exists for incident ${incidentId}.`);
+
+      const isLinkDrift = incidentId === demoIncidents.linkDrift.id;
+      const changed = isLinkDrift && elapsedMinutes >= linkRecheckOffset;
+      const needsInvalidation =
+        changed && approval.state !== linkObservationFixture.finalApprovalState;
+      const fingerprint = needsInvalidation
+        ? fingerprintFor(
+            `${approval.fingerprint}|${linkObservationFixture.observations[1].localReputation}`,
+          )
+        : approval.fingerprint;
+      const offsetMinutes = elapsedMinutes;
+
+      if (needsInvalidation) {
+        setApprovals((current) =>
+          current.map((item) =>
+            item.incidentId === incidentId
+              ? { ...item, state: linkObservationFixture.finalApprovalState, fingerprint }
+              : item,
+          ),
+        );
+        setIncidents((current) =>
+          current.map((item) =>
+            item.id === incidentId ? { ...item, status: "needs_rereview" } : item,
+          ),
+        );
+      }
+
+      setAuditEvents((current) => {
+        if (
+          current.some(
+            (event) =>
+              event.incidentId === incidentId &&
+              event.type === linkRecheckEventType &&
+              event.offsetMinutes === offsetMinutes,
+          )
+        ) {
+          return current;
+        }
+        const next = [
+          ...current,
+          createActionEvent(
+            incidentId,
+            offsetMinutes,
+            linkRecheckEventType,
+            changed
+              ? linkObservationFixture.invalidatedMessage
+              : isLinkDrift
+                ? "The local demo observation remains clean; no network scan was performed."
+                : "Local demo evidence was reviewed; no network scan was performed.",
+            `DEMO-AUDIT-RECHECK-${incidentId}-${offsetMinutes}`,
+          ),
+        ];
+        if (needsInvalidation) {
+          next.push(
+            createActionEvent(
+              incidentId,
+              offsetMinutes + 1,
+              "Approval invalidated",
+              "The approval no longer matches the changed local evidence.",
+              `DEMO-AUDIT-INVALIDATED-${incidentId}-${offsetMinutes}`,
+            ),
+            createActionEvent(
+              incidentId,
+              offsetMinutes + 2,
+              "Returned to Needs re-review",
+              "The incident returned to the analyst queue for another decision.",
+              `DEMO-AUDIT-REREVIEW-${incidentId}-${offsetMinutes}`,
+            ),
+          );
+        }
+        return next;
+      });
+
+      return { changed, fingerprint };
+    },
+    [approvals, elapsedMinutes],
+  );
 
   const advanceSimulatedTime = useCallback(
     (minutes: number) => {
@@ -169,21 +379,26 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
 
       const next = elapsedMinutes + minutes;
       setElapsedMinutes(next);
-      if (
-        elapsedMinutes < linkObservationFixture.recheckAfterMinutes &&
-        next >= linkObservationFixture.recheckAfterMinutes
-      ) {
+      const linkObservationChanged =
+        elapsedMinutes < linkRecheckOffset && next >= linkRecheckOffset;
+      if (linkObservationChanged) {
         setApprovals((currentApprovals) =>
           currentApprovals.map((approval) =>
             approval.incidentId === demoIncidents.linkDrift.id
-              ? { ...approval, state: linkObservationFixture.finalApprovalState }
+              ? {
+                  ...approval,
+                  state: linkObservationFixture.finalApprovalState,
+                  fingerprint: fingerprintFor(
+                    `${approval.fingerprint}|${linkObservationFixture.observations[1].localReputation}`,
+                  ),
+                }
               : approval,
           ),
         );
         setIncidents((currentIncidents) =>
           currentIncidents.map((incident) =>
             incident.id === demoIncidents.linkDrift.id
-              ? { ...incident, status: demoIncidents.linkDrift.status }
+              ? { ...incident, status: "needs_rereview" }
               : incident,
           ),
         );
@@ -197,29 +412,77 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
           ) {
             return currentEvents;
           }
-          const offset = linkObservationFixture.recheckAfterMinutes;
+          const offset = linkRecheckOffset;
           return [
             ...currentEvents,
-            {
-              id: "DEMO-AUDIT-LINK-RECHECK",
-              incidentId: demoIncidents.linkDrift.id,
-              offsetMinutes: offset,
-              timestamp: new Date(clockEpoch + offset * 60_000).toISOString(),
-              type: linkRecheckEventType,
-              detail: linkObservationFixture.invalidatedMessage,
-              actor: "Demo analyst",
-            },
+            createActionEvent(
+              demoIncidents.linkDrift.id,
+              offset,
+              linkRecheckEventType,
+              linkObservationFixture.invalidatedMessage,
+              "DEMO-AUDIT-LINK-RECHECK",
+            ),
+            createActionEvent(
+              demoIncidents.linkDrift.id,
+              offset + 1,
+              "Approval invalidated",
+              "The earlier decision no longer matches the changed evidence.",
+              "DEMO-AUDIT-LINK-INVALIDATED",
+            ),
+            createActionEvent(
+              demoIncidents.linkDrift.id,
+              offset + 2,
+              "Returned to Needs re-review",
+              "The incident returned to the analyst queue for another decision.",
+              "DEMO-AUDIT-LINK-REREVIEW",
+            ),
           ];
         });
       }
+
+      const expired = approvals.filter(
+        (approval) =>
+          approval.state === "valid" &&
+          !(linkObservationChanged && approval.incidentId === demoIncidents.linkDrift.id) &&
+          Date.parse(approval.expiresAt) <= clockEpoch + next * 60_000,
+      );
+      if (expired.length) {
+        setApprovals((currentApprovals) =>
+          currentApprovals.map((approval) =>
+            expired.some((item) => item.id === approval.id)
+              ? { ...approval, state: "stale" }
+              : approval,
+          ),
+        );
+      }
+      setAuditEvents((currentEvents) => [
+        ...currentEvents,
+        createActionEvent(
+          demoIncidents.linkDrift.id,
+          next,
+          "Simulated time advanced",
+          `Demo time advanced by ${minutes} minutes.`,
+          `DEMO-AUDIT-TIME-${elapsedMinutes}-${next}`,
+        ),
+        ...expired.map((approval, index) =>
+          createActionEvent(
+            approval.incidentId,
+            next + index,
+            "Approval expired",
+            "The approval reached its fixture-defined expiry time.",
+            `DEMO-AUDIT-EXPIRED-${approval.id}-${next}`,
+          ),
+        ),
+      ]);
     },
-    [elapsedMinutes],
+    [approvals, elapsedMinutes],
   );
 
   const resetDemo = useCallback(() => {
     setElapsedMinutes(0);
     setIncidents(createInitialIncidents());
     setApprovals(approvalFixtures);
+    setDecisions([]);
     setAuditEvents(createInitialAuditEvents());
   }, []);
 
@@ -227,6 +490,7 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
     () => ({
       incidents,
       approvals,
+      decisions,
       analyzerVerdictFixture,
       analyzerVerdicts,
       auditEvents,
@@ -249,9 +513,21 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
       simulatedTime: new Date(clockEpoch + elapsedMinutes * 60_000),
       formatSimulatedTime,
       advanceSimulatedTime,
+      recordDecision,
+      recheckIncident,
       resetDemo,
     }),
-    [advanceSimulatedTime, approvals, auditEvents, elapsedMinutes, incidents, resetDemo],
+    [
+      advanceSimulatedTime,
+      approvals,
+      auditEvents,
+      decisions,
+      elapsedMinutes,
+      incidents,
+      recordDecision,
+      recheckIncident,
+      resetDemo,
+    ],
   );
 
   return <DemoStoreContext.Provider value={value}>{children}</DemoStoreContext.Provider>;
