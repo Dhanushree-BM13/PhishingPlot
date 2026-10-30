@@ -1,52 +1,94 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, Search, ShieldAlert } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CountUp } from "@/components/dashboard/live-widgets";
 import { Input } from "@/components/ui/input";
 import { useDemoStore } from "@/lib/store";
+import type { ApprovalState, RiskLevel } from "@/lib/types";
 
 export const Route = createFileRoute("/_console/incidents/")({
   head: () => ({ meta: [{ title: "Incidents — PHISHPILOT" }] }),
   component: Incidents,
 });
 
+const riskFilters: (RiskLevel | "all")[] = ["all", "critical", "high", "medium", "low"];
+const approvalTone: Record<ApprovalState, string> = {
+  valid: "guide-pill is-ok",
+  stale: "guide-pill is-warn",
+  invalidated: "guide-pill is-bad",
+  superseded: "cg-badge-demo",
+};
+
 function Incidents() {
   const { incidents, approvals, demoDataLabel } = useDemoStore();
   const [query, setQuery] = useState("");
+  const [riskFilter, setRiskFilter] = useState<RiskLevel | "all">("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [approvalFilter, setApprovalFilter] = useState("all");
 
   const rows = useMemo(
     () =>
-      incidents.filter((incident) => {
-        const approvalState = approvals.find(
-          (approval) => approval.incidentId === incident.id,
-        )?.state;
-        const text = `${incident.id} ${incident.subject} ${incident.sender}`.toLowerCase();
-        return (
-          text.includes(query.toLowerCase()) &&
-          (statusFilter === "all" || incident.status === statusFilter) &&
-          (approvalFilter === "all" || approvalState === approvalFilter)
-        );
-      }),
-    [approvalFilter, approvals, incidents, query, statusFilter],
+      incidents
+        .filter((incident) => {
+          const approvalState = approvals.find(
+            (approval) => approval.incidentId === incident.id,
+          )?.state;
+          const text = `${incident.id} ${incident.subject} ${incident.sender}`.toLowerCase();
+          return (
+            text.includes(query.toLowerCase()) &&
+            (riskFilter === "all" || incident.risk === riskFilter) &&
+            (statusFilter === "all" || incident.status === statusFilter) &&
+            (approvalFilter === "all" || approvalState === approvalFilter)
+          );
+        })
+        .sort((left, right) => right.riskScore - left.riskScore),
+    [approvalFilter, approvals, incidents, query, riskFilter, statusFilter],
   );
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="cg-page space-y-6">
+      <header className="cg-page-heading">
         <div>
-          <h1 className="text-2xl font-semibold">Incidents</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Review fixture-backed case records.</p>
+          <p className="cg-eyebrow">Operate · case records</p>
+          <h1>Incidents</h1>
+          <p>Every reported email as a case, ranked by risk. Open one to see its evidence.</p>
         </div>
-        <Badge className="border-status-analysis/30 bg-status-analysis/10 text-status-analysis">
-          {demoDataLabel}
-        </Badge>
+        <span className="cg-badge-demo">{demoDataLabel}</span>
       </header>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="relative sm:col-span-1">
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by risk">
+        {riskFilters.map((level) => {
+          const count =
+            level === "all"
+              ? incidents.length
+              : incidents.filter((incident) => incident.risk === level).length;
+          const active = riskFilter === level;
+          return (
+            <button
+              aria-pressed={active}
+              className={`risk-chip ${active ? "is-active" : ""}`}
+              key={level}
+              onClick={() => setRiskFilter(level)}
+              style={
+                level === "all"
+                  ? undefined
+                  : ({ "--chip": `var(--risk-${level})` } as React.CSSProperties)
+              }
+              type="button"
+            >
+              {level !== "all" && <span className="risk-chip-dot" />}
+              <span className="capitalize">{level}</span>
+              <span className="font-mono text-xs tabular-nums opacity-70">
+                <CountUp value={count} duration={500} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_1fr_1fr]">
+        <label className="relative">
           <Search
             aria-hidden="true"
             className="absolute left-3 top-2.5 size-4 text-muted-foreground"
@@ -70,6 +112,7 @@ function Incidents() {
           <option value="investigating">In review</option>
           <option value="escalated">Escalated</option>
           <option value="needs_rereview">Needs re-review</option>
+          <option value="awaiting_approval">Awaiting approval</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
@@ -86,57 +129,76 @@ function Incidents() {
           <option value="superseded">Superseded</option>
         </select>
       </div>
-      <Card className="rounded-sm shadow-none">
-        <CardHeader className="border-b border-border p-4">
-          <CardTitle className="text-sm">{rows.length} incident records</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {rows.length ? (
-            <ul className="divide-y divide-border">
-              {rows.map((incident) => {
-                const approval = approvals.find((entry) => entry.incidentId === incident.id);
-                const flagged =
-                  incident.status === "escalated" || incident.status === "needs_rereview";
-                return (
-                  <li key={incident.id}>
-                    <Link
-                      className="grid gap-3 px-4 py-4 transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto_auto]"
-                      params={{ id: incident.id }}
-                      to="/incidents/$id"
-                    >
-                      <span className="min-w-0">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="truncate text-sm font-medium">{incident.subject}</span>
-                          {flagged && (
-                            <Badge className="gap-1 border-status-escalated/30 bg-status-escalated/10 text-status-escalated">
-                              <AlertTriangle aria-hidden="true" className="size-3" />
-                              {incident.status === "needs_rereview"
-                                ? "Needs re-review"
-                                : "Escalated"}
-                            </Badge>
-                          )}
-                        </span>
-                        <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
-                          {incident.id} · {incident.sender}
-                        </span>
+
+      <section className="cg-panel">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <h2 className="text-sm font-semibold">{rows.length} incident records</h2>
+          <span className="font-mono text-[0.66rem] uppercase text-muted-foreground">
+            Sorted by risk score
+          </span>
+        </div>
+        {rows.length ? (
+          <ul className="divide-y divide-border">
+            {rows.map((incident, index) => {
+              const approval = approvals.find((entry) => entry.incidentId === incident.id);
+              return (
+                <li
+                  className="list-row-in"
+                  key={`${incident.id}-${riskFilter}-${statusFilter}-${approvalFilter}`}
+                  style={{ animationDelay: `${index * 45}ms` }}
+                >
+                  <Link
+                    className="incident-row grid grid-cols-[3px_minmax(0,1fr)_auto] items-center gap-4 py-3.5 pr-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    params={{ id: incident.id }}
+                    to="/incidents/$id"
+                  >
+                    <span
+                      className="h-full"
+                      style={{ background: `var(--risk-${incident.risk})` }}
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">{incident.subject}</span>
+                      <span className="mt-0.5 block truncate font-mono text-[0.68rem] text-muted-foreground">
+                        {incident.id} · {incident.sender}
                       </span>
-                      <Badge className="gap-1 border-status-invalid/30 bg-status-invalid/10 text-status-invalid">
-                        <ShieldAlert aria-hidden="true" className="size-3" />
-                        {incident.risk.toUpperCase()}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        Approval: {approval?.state ?? "none"}
+                    </span>
+                    <span className="flex items-center gap-4">
+                      <span className="hidden text-xs capitalize text-muted-foreground lg:inline">
+                        {incident.status.replaceAll("_", " ")}
                       </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="p-6 text-sm text-muted-foreground">No incidents match these filters.</p>
-          )}
-        </CardContent>
-      </Card>
+                      {approval && (
+                        <span className={`hidden sm:inline-flex ${approvalTone[approval.state]}`}>
+                          {approval.state}
+                        </span>
+                      )}
+                      <span className="dash-score">
+                        <span
+                          style={{
+                            width: `${incident.riskScore}%`,
+                            background: `var(--risk-${incident.risk})`,
+                          }}
+                        />
+                      </span>
+                      <span
+                        className="w-9 text-right font-display text-xl font-bold tabular-nums"
+                        style={{ color: `var(--risk-${incident.risk})` }}
+                      >
+                        {incident.riskScore}
+                      </span>
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="row-arrow size-4 text-muted-foreground"
+                      />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="p-6 text-sm text-muted-foreground">No incidents match these filters.</p>
+        )}
+      </section>
     </div>
   );
 }

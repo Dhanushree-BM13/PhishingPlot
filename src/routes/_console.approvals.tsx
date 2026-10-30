@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowUpRight, Check, Clock3, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { BackendStatus } from "@/components/cyberguard/backend-status";
+import { CountUp } from "@/components/dashboard/live-widgets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,11 +86,16 @@ function Approvals() {
     <div className="cg-page space-y-5">
       <header className="cg-page-heading">
         <div>
-          <p className="cg-eyebrow">HUMAN-IN-THE-LOOP / ACTION REVIEW</p>
+          <p className="cg-eyebrow">Respond · human in the loop</p>
           <h1>Approval queue</h1>
           <p>Review supporting evidence and impact before confirming a proposed response.</p>
         </div>
-        <BackendStatus />
+        <div className="text-right">
+          <p className="cg-eyebrow">Waiting for you</p>
+          <div className="font-display text-5xl font-extrabold leading-none tracking-tighter tabular-nums text-risk-medium">
+            <CountUp value={pending.length} />
+          </div>
+        </div>
       </header>
 
       <div className="cg-note">
@@ -114,7 +119,11 @@ function Approvals() {
             "Synthetic evidence from the local demonstration fixture.",
           ];
           return (
-            <Card className="cg-panel" key={incident.id}>
+            <Card
+              className="cg-panel"
+              key={incident.id}
+              style={{ borderTop: `2px solid var(--risk-${incident.risk})` }}
+            >
               <CardContent className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_16rem]">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -169,7 +178,16 @@ function Approvals() {
                 </div>
                 <div className="flex flex-col justify-between gap-4 border-t border-white/5 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
                   <div>
-                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <p
+                      className="font-display text-5xl font-extrabold leading-none tracking-tighter tabular-nums"
+                      style={{ color: `var(--risk-${incident.risk})` }}
+                    >
+                      <CountUp value={incident.riskScore} />
+                    </p>
+                    <p className="mt-1 font-mono text-[0.66rem] uppercase text-muted-foreground">
+                      risk score
+                    </p>
+                    <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                       <Clock3 aria-hidden="true" className="size-3.5" />
                       Approval record · {approval?.state ?? "pending"}
                     </p>

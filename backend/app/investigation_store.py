@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any
 
 import httpx
@@ -54,15 +55,26 @@ async def _request(
     return response.json() if response.content else []
 
 
+_ping_cache: tuple[float, str] | None = None
+PING_TTL_SECONDS = 20
+
+
 async def ping() -> str:
-    """Return 'connected', 'not_configured' or 'error' for the health endpoint."""
+    """Return 'connected', 'not_configured' or 'error'; cached briefly so health checks stay fast."""
+    global _ping_cache
     if not is_configured():
         return "not_configured"
+    now = time.monotonic()
+    if _ping_cache and now - _ping_cache[0] < PING_TTL_SECONDS:
+        return _ping_cache[1]
     try:
         await _request("GET", "investigations", params={"select": "id", "limit": "1"})
     except StoreError:
-        return "error"
-    return "connected"
+        state = "error"
+    else:
+        state = "connected"
+    _ping_cache = (now, state)
+    return state
 
 
 async def save_investigation(request: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:

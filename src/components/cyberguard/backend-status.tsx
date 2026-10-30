@@ -42,7 +42,12 @@ export function BackendStatus({ compact = false }: { compact?: boolean }) {
     };
   }, []);
 
-  const copy = state === "connected" ? "API CONNECTED" : "SIMULATED MODE";
+  const copy =
+    state === "connected"
+      ? "API CONNECTED"
+      : state === "checking"
+        ? "CONNECTING"
+        : "SIMULATED MODE";
   const detail =
     state === "connected"
       ? `Backend API${version ? ` · v${version}` : ""}`

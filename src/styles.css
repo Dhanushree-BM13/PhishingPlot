@@ -1539,3 +1539,509 @@
     transition: none !important;
   }
 }
+
+/* ---------- Live motion layer ---------- */
+
+/* Panels rise into view (driven by useLiveMotion). */
+[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(26px) scale(0.985);
+}
+
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 620ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms ease;
+}
+
+/* Cursor spotlight on panels. */
+.cg-panel {
+  position: relative;
+}
+
+.cg-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    rgb(198 244 50 / 5.5%),
+    transparent 45%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 260ms ease;
+}
+
+.cg-panel:hover::after {
+  opacity: 1;
+}
+
+.cg-panel:hover {
+  border-color: #353b42;
+}
+
+/* Header intel ticker. */
+.ticker {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: #0b0c0e;
+  font-size: 0.72rem;
+}
+
+.ticker-label {
+  display: flex;
+  height: 100%;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  border-right: 1px solid var(--border);
+  padding: 0 0.9rem;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.ticker-viewport {
+  flex: 1;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  gap: 2.5rem;
+  padding-left: 1.5rem;
+  animation: ticker 60s linear infinite;
+  white-space: nowrap;
+}
+
+.ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-track li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #b8bec4;
+}
+
+.ticker-tone {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ticker-tone.is-critical {
+  color: var(--risk-critical);
+}
+
+.ticker-tone.is-high {
+  color: var(--risk-high);
+}
+
+.ticker-tone.is-medium {
+  color: var(--risk-medium);
+}
+
+.ticker-tone.is-low {
+  color: var(--risk-low);
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Dashboard radar. */
+.radar {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid #2a3a12;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgb(198 244 50 / 6%), transparent 70%), #0a0c08;
+}
+
+.radar-rings {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle, transparent 23%, rgb(198 244 50 / 16%) 23.4%, transparent 24%),
+    radial-gradient(circle, transparent 46%, rgb(198 244 50 / 13%) 46.4%, transparent 47%),
+    radial-gradient(circle, transparent 69%, rgb(198 244 50 / 10%) 69.4%, transparent 70%),
+    linear-gradient(rgb(198 244 50 / 10%), rgb(198 244 50 / 10%)) center / 1px 100% no-repeat,
+    linear-gradient(rgb(198 244 50 / 10%), rgb(198 244 50 / 10%)) center / 100% 1px no-repeat;
+}
+
+.radar-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, rgb(198 244 50 / 32%), rgb(198 244 50 / 0%) 70deg, transparent 360deg);
+  animation: radar-spin linear infinite;
+  /* Leading edge sits at 0deg; the trail fades behind it. */
+  transform-origin: center;
+  -webkit-mask-image: radial-gradient(circle, #000 69%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 69%, transparent 70%);
+  scale: -1 1;
+}
+
+@keyframes radar-spin {
+  to {
+    rotate: -360deg;
+  }
+}
+
+.radar-blip {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 999px;
+  opacity: 0.35;
+  animation: radar-blip ease-out infinite;
+}
+
+@keyframes radar-blip {
+  0% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  30% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    opacity: 0.3;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.radar-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.radar-count {
+  font-family: var(--font-display);
+  font-size: 3.2rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: var(--risk-critical);
+  text-shadow: 0 0 18px rgb(0 0 0 / 80%);
+}
+
+.radar-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .ticker-track,
+  .radar-sweep,
+  .radar-blip {
+    animation: none !important;
+  }
+}
+
+/* ---------- Page transitions (View Transitions API) ---------- */
+
+.app-sidebar {
+  view-transition-name: app-sidebar;
+}
+
+.app-topbar {
+  view-transition-name: app-topbar;
+}
+
+.nav-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid #2c3137;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, rgb(198 244 50 / 9%), var(--secondary) 45%);
+  box-shadow: inset 2px 0 0 var(--primary);
+  view-transition-name: nav-indicator;
+}
+
+.nav-link {
+  isolation: isolate;
+  transition:
+    color 150ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:not(.is-active):hover {
+  transform: translateX(3px);
+  background: rgb(255 255 255 / 3%);
+}
+
+.nav-link::before {
+  display: none;
+}
+
+.nav-scroll {
+  scrollbar-width: none;
+}
+
+.nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+::view-transition-old(root) {
+  animation: vt-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(root) {
+  animation: vt-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+::view-transition-group(nav-indicator) {
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-group(app-sidebar),
+::view-transition-group(app-topbar) {
+  animation: none;
+}
+
+::view-transition-old(app-sidebar),
+::view-transition-old(app-topbar) {
+  display: none;
+}
+
+::view-transition-new(app-sidebar),
+::view-transition-new(app-topbar) {
+  animation: none;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.99);
+    filter: blur(3px);
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.99);
+    filter: blur(4px);
+  }
+}
+
+/* With view transitions the route wrapper doesn't need its own entrance. */
+@supports (view-transition-name: none) {
+  .route-transition,
+  .cg-page {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(nav-indicator) {
+    animation: none !important;
+  }
+
+  .nav-link:not(.is-active):hover {
+    transform: none;
+  }
+}
+
+/* ---------- List pages ---------- */
+
+.risk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--input);
+  border-radius: 999px;
+  background: var(--secondary);
+  padding: 0.4rem 0.85rem;
+  color: #c4c9ce;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 120ms ease;
+}
+
+.risk-chip:hover {
+  border-color: var(--chip, var(--primary));
+  color: var(--foreground);
+}
+
+.risk-chip:active {
+  transform: scale(0.96);
+}
+
+.risk-chip.is-active {
+  border-color: var(--chip, var(--primary));
+  background: color-mix(in srgb, var(--chip, var(--primary)) 14%, transparent);
+  color: var(--foreground);
+}
+
+.risk-chip-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--chip);
+}
+
+.list-row-in {
+  animation: row-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+
+.incident-row {
+  transition: background-color 140ms ease;
+}
+
+.incident-row:hover {
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.row-arrow {
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 150ms ease;
+}
+
+.incident-row:hover .row-arrow {
+  transform: translateX(4px);
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-row-in {
+    animation: none !important;
+  }
+
+  .row-arrow,
+  .risk-chip {
+    transition: none !important;
+  }
+}
+
+.alert-stat {
+  border-top: 2px solid var(--chip);
+  cursor: pointer;
+}
+
+.alert-stat.is-active {
+  background: color-mix(in srgb, var(--chip) 9%, var(--card));
+  border-color: var(--chip);
+}
+
+.pulse-dot {
+  position: relative;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--risk-critical);
+}
+
+.pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--risk-critical);
+  animation: ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot::after {
+    animation: none !important;
+  }
+}
+
+/* ---------- Audit timeline ---------- */
+
+.audit-timeline {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.audit-timeline::before {
+  content: "";
+  position: absolute;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  left: 0.3rem;
+  width: 1px;
+  background: linear-gradient(var(--border), var(--border) 85%, transparent);
+}
+
+.audit-item {
+  position: relative;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgb(255 255 255 / 4%);
+}
+
+.audit-node {
+  position: absolute;
+  top: 1.05rem;
+  left: -1.5rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 2px solid var(--node);
+  border-radius: 999px;
+  background: var(--card);
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.audit-item:hover .audit-node {
+  background: var(--node);
+  transform: scale(1.25);
+}
+
+.audit-item:first-child .audit-node {
+  background: var(--node);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--node) 22%, transparent);
+}

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, ScanSearch } from "lucide-react";
 
 import { CountUp, LiveFeed, ThroughputSparkline } from "@/components/dashboard/live-widgets";
+import { ThreatRadar } from "@/components/dashboard/threat-radar";
 import { Button } from "@/components/ui/button";
 import { deriveDemoAlerts, type DemoAlertPriority } from "@/lib/demo-alerts";
 import { useDemoStore } from "@/lib/store";
@@ -79,13 +80,7 @@ function Dashboard() {
       </header>
 
       <section className="cg-panel grid gap-6 p-5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
-        <div>
-          <p className="cg-eyebrow">Urgent now</p>
-          <p className="dash-hero-number" style={{ color: "var(--risk-critical)" }}>
-            <CountUp value={urgent.length} />
-          </p>
-          <p className="text-xs text-muted-foreground">open high or critical</p>
-        </div>
+        <ThreatRadar incidents={open} urgent={urgent.length} />
 
         <div>
           <div className="flex items-center justify-between">

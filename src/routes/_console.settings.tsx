@@ -1,9 +1,10 @@
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RotateCcw } from "lucide-react";
+import { Database, Gauge, RotateCcw, Server, ShieldCheck, Timer } from "lucide-react";
+import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cyberguardApi, isCyberguardApiConfigured } from "@/lib/cyberguard-api";
 import { useDemoStore } from "@/lib/store";
 
 export const Route = createFileRoute("/_console/settings")({
@@ -11,49 +12,143 @@ export const Route = createFileRoute("/_console/settings")({
   component: Settings,
 });
 
+type Health = { api: string; database: string };
+
+function useHealth(): Health {
+  const [health, setHealth] = useState<Health>({
+    api: isCyberguardApiConfigured ? "checking" : "not configured",
+    database: isCyberguardApiConfigured ? "checking" : "not configured",
+  });
+  useEffect(() => {
+    if (!isCyberguardApiConfigured) return;
+    let active = true;
+    cyberguardApi
+      .health()
+      .then(
+        (result) =>
+          active &&
+          setHealth({
+            api: result.status === "ok" ? "online" : "degraded",
+            database: (result.database ?? "unknown").replace("_", " "),
+          }),
+      )
+      .catch(() => active && setHealth({ api: "offline", database: "unknown" }));
+    return () => {
+      active = false;
+    };
+  }, []);
+  return health;
+}
+
 function Settings() {
-  const { config, demoDataLabel, resetDemo } = useDemoStore();
-  const entries = [
-    ["Ruleset version", config.rulesetVersion],
-    [
-      "Approval TTL",
-      config.approvalTtlMinutes === null
-        ? "Not specified in demo fixtures"
-        : `${config.approvalTtlMinutes} simulated minutes`,
-    ],
-    ["Trust break threshold", config.trustBreakThreshold],
+  const { config, demoDataLabel, resetDemo, trustedSenderCaseFixture } = useDemoStore();
+  const health = useHealth();
+  const maxWeight = Math.max(...trustedSenderCaseFixture.signals.map((signal) => signal.weight));
+  const tiles = [
+    { icon: ShieldCheck, label: "Ruleset version", value: config.rulesetVersion },
+    {
+      icon: Timer,
+      label: "Approval TTL",
+      value:
+        config.approvalTtlMinutes === null ? "Not specified" : `${config.approvalTtlMinutes} min`,
+    },
+    { icon: Gauge, label: "Trust break threshold", value: config.trustBreakThreshold },
+  ];
+  const services = [
+    { icon: Server, label: "Agent API", value: health.api },
+    { icon: Database, label: "Supabase", value: health.database },
   ];
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="cg-page space-y-6">
+      <header className="cg-page-heading">
         <div>
-          <h1 className="text-2xl font-semibold">Settings</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Read-only configuration for this demo.
-          </p>
+          <p className="cg-eyebrow">Govern · configuration</p>
+          <h1>Settings</h1>
+          <p>Read-only rules that drive scoring and approvals, and the state of each service.</p>
         </div>
-        <Badge className="border-status-analysis/30 bg-status-analysis/10 text-status-analysis">
-          {demoDataLabel}
-        </Badge>
+        <span className="cg-badge-demo">{demoDataLabel}</span>
       </header>
-      <Card className="max-w-2xl rounded-sm shadow-none">
-        <CardHeader className="border-b border-border p-4">
-          <CardTitle className="text-sm">Demo configuration</CardTitle>
-        </CardHeader>
-        <CardContent className="divide-y divide-border p-0">
-          {entries.map(([label, value]) => (
-            <div className="flex items-center justify-between gap-4 px-4 py-4" key={label}>
-              <span className="text-sm text-muted-foreground">{label}</span>
-              <span className="font-mono text-sm tabular-nums">{value}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-      <Button className="gap-2" onClick={resetDemo} variant="outline">
-        <RotateCcw aria-hidden="true" className="size-4" />
-        Reset demo
-      </Button>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        {tiles.map(({ icon: Icon, label, value }) => (
+          <div className="cg-panel p-5" key={label}>
+            <Icon aria-hidden="true" className="size-5 text-primary" />
+            <p className="mt-4 text-xs text-muted-foreground">{label}</p>
+            <p className="mt-1 font-mono text-lg font-semibold">{value}</p>
+          </div>
+        ))}
+      </section>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <section className="cg-panel p-5">
+          <h2 className="text-sm font-semibold">Sender-behavior signal weights</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Points each deviation adds to a trusted sender&apos;s risk (
+            {trustedSenderCaseFixture.rulesetVersion}).
+          </p>
+          <ul className="mt-5 space-y-3">
+            {trustedSenderCaseFixture.signals.map((signal, index) => (
+              <li className="guide-bar-row" key={signal.id}>
+                <span>{signal.id.replaceAll("_", " ").toLowerCase()}</span>
+                <span className="guide-bar">
+                  <span
+                    style={{
+                      width: `${(signal.weight / maxWeight) * 100}%`,
+                      animationDelay: `${200 + index * 150}ms`,
+                    }}
+                  />
+                </span>
+                <span className="font-mono">+{signal.weight}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="cg-panel p-5">
+          <h2 className="text-sm font-semibold">Services</h2>
+          <ul className="mt-4 space-y-2">
+            {services.map(({ icon: Icon, label, value }) => {
+              const state =
+                value === "online" || value === "connected"
+                  ? "up"
+                  : value === "checking"
+                    ? "checking"
+                    : value === "not configured"
+                      ? "off"
+                      : "down";
+              return (
+                <li className="cg-system-row border border-border" key={label}>
+                  <span className="cg-system-icon">
+                    <Icon aria-hidden="true" />
+                  </span>
+                  <span>
+                    <strong>{label}</strong>
+                    <small className="capitalize">{value}</small>
+                  </span>
+                  <span className={`status-dot is-${state} ml-auto`} />
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-5 border-t border-border pt-4">
+            <p className="text-xs text-muted-foreground">
+              Restore the sample incidents, approvals and simulated clock.
+            </p>
+            <Button
+              className="mt-3 gap-2"
+              onClick={() => {
+                resetDemo();
+                toast.success("Demo reset", { description: "Fixtures and clock restored." });
+              }}
+              variant="outline"
+            >
+              <RotateCcw aria-hidden="true" className="size-4" />
+              Reset demo
+            </Button>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

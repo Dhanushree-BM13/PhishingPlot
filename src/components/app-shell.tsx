@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   BellRing,
@@ -36,6 +36,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { BackendStatus } from "@/components/cyberguard/backend-status";
 import { cyberguardApi, isCyberguardApiConfigured } from "@/lib/cyberguard-api";
+import { useLiveMotion } from "@/hooks/use-live-motion";
 import { deriveDemoAlerts } from "@/lib/demo-alerts";
 import { useDemoStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -106,14 +107,13 @@ function NavigationLink({
   count?: NavCount | undefined;
 }) {
   const className = cn(
-    "nav-link group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-    active
-      ? "is-active bg-secondary text-foreground"
-      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+    "nav-link group relative flex items-center gap-3 rounded-md px-3 py-[7px] text-[0.84rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    active ? "is-active text-foreground" : "text-muted-foreground hover:text-foreground",
     collapsed && "justify-center px-2",
   );
   const content = (
     <>
+      {active && <span aria-hidden="true" className="nav-indicator" />}
       <Icon
         aria-hidden="true"
         className={cn(
@@ -253,27 +253,26 @@ function SidebarStatus({ collapsed }: { collapsed: boolean }) {
   }
 
   return (
-    <div className="rounded-md border border-border bg-background/60 p-3">
-      <ul className="space-y-1.5">
-        {rows.map((row) => (
-          <li className="flex items-center gap-2 text-xs" key={row.label}>
-            <span className={`status-dot is-${row.state}`} />
-            <span className="text-muted-foreground">{row.label}</span>
-            <span className="ml-auto font-mono text-[0.66rem] uppercase">
-              {serviceLabel[row.state]}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2.5 flex items-center gap-1.5 border-t border-border pt-2.5 font-mono text-[0.66rem] text-muted-foreground">
+    <div className="flex items-center gap-3 rounded-md border border-border bg-background/60 px-3 py-2">
+      {rows.map((row) => (
+        <span
+          className="flex items-center gap-1.5 text-[0.7rem] text-muted-foreground"
+          key={row.label}
+          title={`${row.label}: ${serviceLabel[row.state]}`}
+        >
+          <span className={`status-dot is-${row.state}`} />
+          {row.label === "Agent API" ? "API" : "DB"}
+        </span>
+      ))}
+      <span
+        className="ml-auto flex items-center gap-1 font-mono text-[0.62rem] text-muted-foreground"
+        title="Simulated demo clock"
+      >
         <Clock3 aria-hidden="true" className="size-3" />
-        {new Intl.DateTimeFormat("en", {
-          dateStyle: "medium",
-          timeStyle: "short",
-          timeZone: "UTC",
-        }).format(simulatedTime)}{" "}
-        UTC · simulated
-      </p>
+        {new Intl.DateTimeFormat("en", { timeStyle: "short", timeZone: "UTC" }).format(
+          simulatedTime,
+        )}
+      </span>
     </div>
   );
 }
@@ -303,7 +302,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border bg-sidebar transition-[width] duration-200 md:flex",
+        "app-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border bg-sidebar transition-[width] duration-200 md:flex",
         collapsed ? "w-16" : "w-64",
       )}
     >
@@ -333,9 +332,16 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
           )}
         </Link>
         {!collapsed && (
-          <Button aria-label="Collapse sidebar" onClick={onToggle} size="icon" variant="ghost">
-            <PanelLeftClose aria-hidden="true" className="size-4" />
-          </Button>
+          <span className="flex">
+            <Button asChild size="icon" title="Open landing page" variant="ghost">
+              <Link aria-label="Open landing page" to="/">
+                <ChevronLeft aria-hidden="true" className="size-4" />
+              </Link>
+            </Button>
+            <Button aria-label="Collapse sidebar" onClick={onToggle} size="icon" variant="ghost">
+              <PanelLeftClose aria-hidden="true" className="size-4" />
+            </Button>
+          </span>
         )}
       </div>
       {collapsed && (
@@ -349,9 +355,9 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
           <PanelLeftOpen aria-hidden="true" className="size-4" />
         </Button>
       )}
-      <nav aria-label="Primary navigation" className="flex-1 overflow-y-auto p-3">
+      <nav aria-label="Primary navigation" className="nav-scroll flex-1 overflow-y-auto px-3 py-2">
         {navigationGroups.map((group) => (
-          <div className="mb-3" key={group}>
+          <div className="mb-1.5" key={group}>
             {!collapsed && <p className="nav-group-label">{group}</p>}
             <div className="space-y-0.5">
               {primaryNavigation
@@ -394,24 +400,8 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
           </div>
         )}
       </nav>
-      <div
-        className={cn(
-          "space-y-2 border-t border-border p-3",
-          collapsed && "flex flex-col items-center",
-        )}
-      >
+      <div className={cn("border-t border-border p-3", collapsed && "flex justify-center")}>
         <SidebarStatus collapsed={collapsed} />
-        <Link
-          className={cn(
-            "flex items-center gap-3 rounded-sm px-3 py-2 text-sm text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-            collapsed && "px-2",
-          )}
-          title={collapsed ? "Open landing" : undefined}
-          to="/"
-        >
-          <ChevronLeft aria-hidden="true" className="size-4 shrink-0" />
-          <span className={collapsed ? "sr-only" : ""}>Open landing</span>
-        </Link>
       </div>
     </aside>
   );
@@ -528,10 +518,69 @@ function DemoControls() {
   );
 }
 
+/** Real wall-clock time, ticking every second. */
+function LiveClock() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const interval = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+  return (
+    <time className="hidden items-center gap-2 font-mono text-xs tabular-nums lg:flex">
+      <span className="status-dot is-up" />
+      {now ? now.toISOString().slice(11, 19) : "--:--:--"}
+      <span className="text-muted-foreground">UTC</span>
+    </time>
+  );
+}
+
+const tickerIntel = [
+  { tone: "high", text: "Proxy blocked passwrd-reset-secure.example · 3 users" },
+  { tone: "medium", text: "New lookalike domain registered: company-support.example" },
+  { tone: "low", text: "Gateway scanned 1,284 messages in the last hour" },
+  { tone: "critical", text: "Credential POST observed to an untrusted host" },
+  { tone: "low", text: "DMARC aggregate report received · 99.2% aligned" },
+] as const;
+
+/** Continuously scrolling intel strip built from the live incident queue plus simulated feed items. */
+function ThreatTicker() {
+  const { incidents } = useDemoStore();
+  const items = [
+    ...incidents
+      .filter((incident) => !["approved", "rejected", "resolved"].includes(incident.status))
+      .map((incident) => ({
+        tone: incident.risk,
+        text: `${incident.id} · ${incident.subject} · score ${incident.riskScore}`,
+      })),
+    ...tickerIntel,
+  ];
+  const loop = [...items, ...items];
+  return (
+    <div aria-label="Threat intel ticker" className="ticker" role="marquee">
+      <span className="ticker-label">
+        <span className="status-dot is-up" /> LIVE INTEL
+      </span>
+      <div className="ticker-viewport">
+        <ul className="ticker-track">
+          {loop.map((item, index) => (
+            <li key={`${item.text}-${index}`}>
+              <span className={`ticker-tone is-${item.tone}`}>{item.tone}</span>
+              {item.text}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { demoDataLabel, simulatedTime } = useDemoStore();
+  const { demoDataLabel } = useDemoStore();
+  const mainRef = useRef<HTMLElement | null>(null);
+  useLiveMotion(mainRef, pathname);
   const title =
     routeTitles[pathname] ??
     (pathname.startsWith("/incidents/") ? "Incident detail" : "PhishPilot");
@@ -579,29 +628,25 @@ export function AppShell() {
           collapsed ? "md:pl-16" : "md:pl-64",
         )}
       >
-        <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur md:px-6">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold tracking-wide">{title}</p>
-            <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">
-              Agentic phishing response
-            </p>
-          </div>
-          <BackendStatus compact />
-          <Badge className="hidden gap-1.5 border-status-analysis/30 bg-status-analysis/10 text-status-analysis sm:inline-flex">
-            <Activity aria-hidden="true" className="size-3" />
-            {demoDataLabel}
-          </Badge>
-          <time className="hidden font-mono text-xs tabular-nums text-muted-foreground lg:block">
-            {new Intl.DateTimeFormat("en", {
-              dateStyle: "medium",
-              timeStyle: "short",
-              timeZone: "UTC",
-            }).format(simulatedTime)}{" "}
-            UTC
-          </time>
-          <DemoControls />
-        </header>
-        <main className="min-w-0 px-4 pb-24 pt-5 md:px-6 md:pb-8">
+        <div className="app-topbar sticky top-0 z-20">
+          <header className="flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur md:px-6">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold tracking-wide">{title}</p>
+              <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">
+                Agentic phishing response
+              </p>
+            </div>
+            <BackendStatus compact />
+            <Badge className="hidden gap-1.5 border-status-analysis/30 bg-status-analysis/10 text-status-analysis sm:inline-flex">
+              <Activity aria-hidden="true" className="size-3" />
+              {demoDataLabel}
+            </Badge>
+            <LiveClock />
+            <DemoControls />
+          </header>
+          <ThreatTicker />
+        </div>
+        <main className="min-w-0 px-4 pb-24 pt-5 md:px-6 md:pb-8" ref={mainRef}>
           <div className="route-transition" key={pathname}>
             <Outlet />
           </div>

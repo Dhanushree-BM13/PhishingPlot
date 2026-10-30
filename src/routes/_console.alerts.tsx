@@ -1,15 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowUpRight, BellRing, Search, ShieldAlert } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CountUp } from "@/components/dashboard/live-widgets";
 import { Input } from "@/components/ui/input";
-import { useSectionReveal } from "@/lib/motion";
 import { deriveDemoAlerts, type DemoAlertPriority } from "@/lib/demo-alerts";
 import { useDemoStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_console/alerts")({
   head: () => ({ meta: [{ title: "Alerts — PHISHPILOT" }] }),
@@ -23,18 +19,19 @@ const priorityLabels: Record<DemoAlertPriority, string> = {
   info: "Info",
 };
 
+const priorityColor: Record<DemoAlertPriority, string> = {
+  critical: "var(--risk-critical)",
+  high: "var(--risk-high)",
+  warning: "var(--risk-medium)",
+  info: "var(--risk-low)",
+};
+
 function Alerts() {
   const { incidents, approvals, demoDataLabel, formatSimulatedTime, simulatedTime } =
     useDemoStore();
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"all" | DemoAlertPriority>("all");
   const alerts = useMemo(() => deriveDemoAlerts(incidents, approvals), [approvals, incidents]);
-  const { ref, visible } = useSectionReveal<HTMLElement>();
-  const counts = {
-    critical: alerts.filter((alert) => alert.priority === "critical").length,
-    high: alerts.filter((alert) => alert.priority === "high").length,
-    warning: alerts.filter((alert) => alert.priority === "warning").length,
-  };
   const filteredAlerts = alerts.filter((alert) => {
     const incident = incidents.find((item) => item.id === alert.incidentId);
     const searchable = `${alert.title} ${alert.detail} ${incident?.subject ?? ""} ${alert.incidentId}`;
@@ -44,173 +41,153 @@ function Alerts() {
     );
   });
 
+  const summary: [DemoAlertPriority, string][] = [
+    ["critical", "Critical"],
+    ["high", "High"],
+    ["warning", "Warnings"],
+  ];
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <div className="cg-page space-y-6">
+      <header className="cg-page-heading">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-status-analysis">
-            Demo signal desk
-          </p>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold">
-            <BellRing aria-hidden="true" className="size-5 text-status-escalated" />
-            Alerts
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Review simulated risk, approval, and evidence-state alerts. These are derived from local
-            demo records, not live monitoring.
+          <p className="cg-eyebrow">Operate · signal desk</p>
+          <h1>Alerts</h1>
+          <p>
+            Risk, approval and evidence alerts raised from the incident queue. Simulated, not live
+            monitoring.
           </p>
         </div>
-        <Badge className="border-status-analysis/30 bg-status-analysis/10 text-status-analysis">
-          {demoDataLabel}
-        </Badge>
+        <span className="cg-badge-demo">{demoDataLabel}</span>
       </header>
 
-      <section
-        aria-label="Alert summary"
-        className="grid gap-3 sm:grid-cols-3"
-        data-visible={visible}
-        ref={ref}
-      >
-        {(
-          [
-            ["Critical", counts.critical, "text-status-invalid"],
-            ["High", counts.high, "text-status-escalated"],
-            ["Warnings", counts.warning, "text-status-analysis"],
-          ] as const
-        ).map(([label, count, color], index) => (
-          <Card
-            className="section-reveal rounded-sm shadow-none"
-            data-visible={visible}
-            key={label}
-            style={{ transitionDelay: `${Math.min(index, 5) * 50}ms` }}
-          >
-            <CardHeader className="flex-row items-center justify-between space-y-0 p-4">
-              <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
-              <AlertTriangle aria-hidden="true" className={cn("size-4", color)} />
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0">
-              <p className={cn("text-3xl font-semibold tabular-nums", color)}>{count}</p>
-            </CardContent>
-          </Card>
-        ))}
+      <section aria-label="Alert summary" className="grid gap-3 sm:grid-cols-3">
+        {summary.map(([priority, label]) => {
+          const count = alerts.filter((alert) => alert.priority === priority).length;
+          const active = priorityFilter === priority;
+          return (
+            <button
+              aria-pressed={active}
+              className={`cg-panel alert-stat p-5 text-left ${active ? "is-active" : ""}`}
+              key={priority}
+              onClick={() => setPriorityFilter(active ? "all" : priority)}
+              style={{ "--chip": priorityColor[priority] } as React.CSSProperties}
+              type="button"
+            >
+              <span className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{label}</span>
+                {priority === "critical" && count > 0 && <span className="pulse-dot" />}
+              </span>
+              <span
+                className="mt-2 block font-display text-5xl font-extrabold tracking-tighter tabular-nums"
+                style={{ color: priorityColor[priority] }}
+              >
+                <CountUp value={count} />
+              </span>
+              <span className="mt-1 block font-mono text-[0.66rem] uppercase text-muted-foreground">
+                {active ? "Filtering · click to clear" : "Click to filter"}
+              </span>
+            </button>
+          );
+        })}
       </section>
 
-      <Card className="rounded-sm shadow-none">
-        <CardHeader className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
+      <section className="cg-panel">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <div>
-            <CardTitle className="text-sm">Alert queue</CardTitle>
-            <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+            <h2 className="text-sm font-semibold">Alert queue</h2>
+            <p className="font-mono text-[0.66rem] text-muted-foreground">
               Simulated time · {formatSimulatedTime(simulatedTime.toISOString())} UTC
             </p>
           </div>
           <span className="font-mono text-xs text-muted-foreground">
             {filteredAlerts.length} / {alerts.length} alerts
           </span>
-        </CardHeader>
-        <CardContent className="space-y-3 p-4">
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
-            <label className="relative">
-              <Search
-                aria-hidden="true"
-                className="absolute left-3 top-2.5 size-4 text-muted-foreground"
-              />
-              <Input
-                aria-label="Search alerts"
-                className="pl-9"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search alerts or incidents"
-                value={query}
-              />
-            </label>
-            <select
-              aria-label="Filter by alert priority"
-              className="field"
-              onChange={(event) =>
-                setPriorityFilter(event.target.value as "all" | DemoAlertPriority)
-              }
-              value={priorityFilter}
-            >
-              <option value="all">All priorities</option>
-              {Object.entries(priorityLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
+        </div>
+        <div className="grid gap-3 border-b border-border p-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
+          <label className="relative">
+            <Search
+              aria-hidden="true"
+              className="absolute left-3 top-2.5 size-4 text-muted-foreground"
+            />
+            <Input
+              aria-label="Search alerts"
+              className="pl-9"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search alerts or incidents"
+              value={query}
+            />
+          </label>
+          <select
+            aria-label="Filter by alert priority"
+            className="field"
+            onChange={(event) => setPriorityFilter(event.target.value as "all" | DemoAlertPriority)}
+            value={priorityFilter}
+          >
+            <option value="all">All priorities</option>
+            {Object.entries(priorityLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {filteredAlerts.length ? (
-            <ol className="divide-y divide-border border-y border-border">
-              {filteredAlerts.map((alert, index) => {
-                const incident = incidents.find((item) => item.id === alert.incidentId);
-                return (
-                  <li
-                    className="section-reveal"
-                    data-visible={visible}
-                    key={alert.id}
-                    style={{ transitionDelay: `${Math.min(index, 6) * 45}ms` }}
+        {filteredAlerts.length ? (
+          <ol className="divide-y divide-border">
+            {filteredAlerts.map((alert, index) => {
+              const incident = incidents.find((item) => item.id === alert.incidentId);
+              return (
+                <li
+                  className="list-row-in"
+                  key={`${alert.id}-${priorityFilter}`}
+                  style={{ animationDelay: `${index * 45}ms` }}
+                >
+                  <Link
+                    className="incident-row grid grid-cols-[3px_minmax(0,1fr)_auto] items-center gap-4 py-3.5 pr-5"
+                    params={{ id: alert.incidentId }}
+                    to="/incidents/$id"
                   >
-                    <div className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                      <div className="flex min-w-0 gap-3">
+                    <span
+                      className="h-full"
+                      style={{ background: priorityColor[alert.priority] }}
+                    />
+                    <span className="min-w-0">
+                      <span className="flex flex-wrap items-center gap-2">
+                        {alert.priority === "critical" && <span className="pulse-dot" />}
+                        <span className="text-sm font-semibold">{alert.title}</span>
                         <span
-                          className={cn(
-                            "mt-0.5 flex size-8 shrink-0 items-center justify-center border",
-                            alert.priority === "critical"
-                              ? "border-status-invalid/30 bg-status-invalid/10 text-status-invalid"
-                              : alert.priority === "high"
-                                ? "border-status-escalated/30 bg-status-escalated/10 text-status-escalated"
-                                : "border-status-analysis/30 bg-status-analysis/10 text-status-analysis",
-                          )}
+                          className="font-mono text-[0.62rem] font-semibold uppercase"
+                          style={{ color: priorityColor[alert.priority] }}
                         >
-                          <ShieldAlert aria-hidden="true" className="size-4" />
+                          {priorityLabels[alert.priority]}
                         </span>
-                        <span className="min-w-0">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold">{alert.title}</span>
-                            <Badge
-                              className={cn(
-                                "border",
-                                alert.priority === "critical"
-                                  ? "border-status-invalid/30 bg-status-invalid/10 text-status-invalid"
-                                  : alert.priority === "high"
-                                    ? "border-status-escalated/30 bg-status-escalated/10 text-status-escalated"
-                                    : "border-status-analysis/30 bg-status-analysis/10 text-status-analysis",
-                              )}
-                            >
-                              {priorityLabels[alert.priority]}
-                            </Badge>
-                          </span>
-                          <span className="mt-1 block text-sm text-muted-foreground">
-                            {alert.detail}
-                          </span>
-                          {incident && (
-                            <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
-                              {incident.id} · {incident.risk.toUpperCase()} ·{" "}
-                              {incident.status.replaceAll("_", " ")}
-                            </span>
-                          )}
-                        </span>
-                      </div>
+                      </span>
+                      <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+                        {alert.detail}
+                      </span>
                       {incident && (
-                        <Button asChild size="sm" variant="outline">
-                          <Link params={{ id: incident.id }} to="/incidents/$id">
-                            Review case
-                            <ArrowUpRight aria-hidden="true" />
-                          </Link>
-                        </Button>
+                        <span className="mt-0.5 block font-mono text-[0.66rem] text-muted-foreground">
+                          {incident.id} · score {incident.riskScore} ·{" "}
+                          {incident.status.replaceAll("_", " ")}
+                        </span>
                       )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No alerts match this filter.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                    </span>
+                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="hidden sm:inline">Review case</span>
+                      <ArrowRight aria-hidden="true" className="row-arrow size-4" />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No alerts match this filter.
+          </p>
+        )}
+      </section>
     </div>
   );
 }
