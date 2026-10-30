@@ -6,6 +6,12 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// On Vercel the FastAPI `backend` service is mounted at /api on the same domain (see vercel.json),
+// so the web app calls it same-origin unless an explicit URL is configured.
+if (process.env["VERCEL"] && process.env["VITE_CYBERGUARD_API_URL"] === undefined) {
+  process.env["VITE_CYBERGUARD_API_URL"] = "/";
+}
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).

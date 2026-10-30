@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-const apiBaseUrl = import.meta.env["VITE_CYBERGUARD_API_URL"]?.replace(/\/+$/, "");
+// Unset: no backend (demo mode). "/" or "": same origin, e.g. the Vercel `backend` service
+// mounted at /api. Otherwise an absolute URL such as http://127.0.0.1:8000 for local dev.
+const configuredApiUrl = import.meta.env["VITE_CYBERGUARD_API_URL"] as string | undefined;
+const apiBaseUrl = configuredApiUrl?.replace(/\/+$/, "");
 
 const healthSchema = z.object({
   status: z.enum(["ok", "degraded"]),
@@ -115,10 +118,10 @@ export type EmailAnalysisResult = z.infer<typeof analysisSchema>;
 export type InvestigationAgent = z.infer<typeof investigationAgentSchema>;
 export type RecommendedAction = z.infer<typeof recommendedActionSchema>;
 
-export const isCyberguardApiConfigured = Boolean(apiBaseUrl);
+export const isCyberguardApiConfigured = apiBaseUrl !== undefined;
 
 async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
-  if (!apiBaseUrl) {
+  if (apiBaseUrl === undefined) {
     throw new Error("Backend API is not configured. Set VITE_CYBERGUARD_API_URL to enable it.");
   }
 
