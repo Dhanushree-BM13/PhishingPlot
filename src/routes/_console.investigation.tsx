@@ -11,6 +11,7 @@ import {
 
 import { BackendStatus } from "@/components/cyberguard/backend-status";
 import { ActionApprovals, AgentPipeline } from "@/components/investigation/agent-pipeline";
+import { SavedInvestigations } from "@/components/investigation/saved-investigations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -130,6 +131,7 @@ function Investigation() {
   const [resultSource, setResultSource] = useState<"simulated" | "backend" | null>(null);
   const [backendError, setBackendError] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [savedRefresh, setSavedRefresh] = useState(0);
 
   const fillExample = (example: (typeof examples)[number]) => {
     setForm({ ...example });
@@ -157,6 +159,7 @@ function Investigation() {
         const analysis = await cyberguardApi.analyzeEmail(payload);
         setResult(analysis);
         setResultSource("backend");
+        if (analysis.persisted) setSavedRefresh((count) => count + 1);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "The backend request failed unexpectedly.";
@@ -287,9 +290,14 @@ function Investigation() {
             <CardTitle className="flex items-center justify-between gap-2 text-sm">
               Analysis results
               {resultSource && (
-                <Badge className={resultSource === "backend" ? "cg-badge-live" : "cg-badge-demo"}>
-                  {resultSource === "backend" ? "LIVE BACKEND ANALYSIS" : "SIMULATED RESULT"}
-                </Badge>
+                <span className="flex flex-wrap gap-1.5">
+                  <Badge className={resultSource === "backend" ? "cg-badge-live" : "cg-badge-demo"}>
+                    {resultSource === "backend" ? "LIVE BACKEND ANALYSIS" : "SIMULATED RESULT"}
+                  </Badge>
+                  {result?.persisted && result.incidentId && (
+                    <Badge className="cg-badge-live">SAVED · {result.incidentId.slice(0, 8)}</Badge>
+                  )}
+                </span>
               )}
             </CardTitle>
           </CardHeader>
@@ -389,8 +397,12 @@ function Investigation() {
       </div>
       {result?.agents && <AgentPipeline agents={result.agents} />}
       {result?.recommendedActions && result.recommendedActions.length > 0 && (
-        <ActionApprovals actions={result.recommendedActions} />
+        <ActionApprovals
+          actions={result.recommendedActions}
+          investigationId={result.persisted ? result.incidentId : undefined}
+        />
       )}
+      {isCyberguardApiConfigured && <SavedInvestigations refreshKey={savedRefresh} />}
       <p className="text-xs leading-relaxed text-muted-foreground">
         <AlertTriangle aria-hidden="true" className="mr-1 inline size-3.5 text-status-escalated" />
         {resultSource === "backend"

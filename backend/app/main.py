@@ -1,19 +1,27 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .agents import AGENT_NAMES, analyze_incident, email_record_from_raw
-from .clock import as_utc, utc_now
-from .orchestrator import run_investigation
-from .supabase_rest import SupabaseRest
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+from . import investigation_store  # noqa: E402 - reads env loaded above
+from .agents import AGENT_NAMES, analyze_incident, email_record_from_raw  # noqa: E402
+from .clock import as_utc, utc_now  # noqa: E402
+from .orchestrator import run_investigation  # noqa: E402
+from .supabase_rest import SupabaseRest  # noqa: E402
+
+logger = logging.getLogger("phishpilot")
 
 app = FastAPI(title="PHISHPILOT Incident API", version="1.0.0")
 origins = [
@@ -104,7 +112,7 @@ async def health() -> dict[str, str]:
 
 @app.get("/api/health")
 async def api_health() -> dict[str, str]:
-    return {"status": "ok", "version": app.version}
+    return {"status": "ok", "version": app.version, "database": await investigation_store.ping()}
 
 
 @app.post("/api/analyze")
@@ -112,10 +120,53 @@ async def api_analyze(
     request: AnalyzeRequest,
     now: datetime = Depends(utc_now),
 ) -> dict[str, Any]:
-    """Stateless multi-agent investigation; nothing is stored, fetched or executed."""
-    return run_investigation(
-        request.subject, request.sender, request.body, request.urls, now=now
-    )
+    """Run the multi-agent investigation and, when Supabase is configured, store it."""
+    result = run_investigation(request.subject, request.sender, request.body, request.urls, now=now)
+    result["persisted"] = False
+    if investigation_store.is_configured():
+        try:
+            saved = await investigation_store.save_investigation(request.model_dump(), result)
+        except investigation_store.StoreError:
+            logger.exception("Could not store investigation")
+        else:
+            result.update(persisted=True, incidentId=saved["id"], createdAt=saved["createdAt"])
+            for action in result["recommendedActions"]:
+                action["recordId"] = saved["actionIds"].get(action["id"])
+    return result
+
+
+@app.get("/api/investigations")
+async def api_list_investigations() -> list[dict[str, Any]]:
+    try:
+        return await investigation_store.list_investigations()
+    except investigation_store.StoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/investigations/{investigation_id}/audit")
+async def api_investigation_audit(investigation_id: UUID) -> list[dict[str, Any]]:
+    try:
+        return await investigation_store.list_audit(str(investigation_id))
+    except investigation_store.StoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/api/investigations/{investigation_id}/actions/{action_id}/decision")
+async def api_decide_action(
+    investigation_id: UUID,
+    action_id: UUID,
+    decision: ApprovalDecision,
+    now: datetime = Depends(utc_now),
+) -> dict[str, Any]:
+    """Record an analyst decision. Nothing is executed; the action stays simulated."""
+    try:
+        return await investigation_store.decide_action(
+            str(investigation_id), str(action_id), decision.decision, as_utc(now).isoformat()
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except investigation_store.StoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/incidents")

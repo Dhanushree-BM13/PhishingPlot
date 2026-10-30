@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { cyberguardApi, isCyberguardApiConfigured } from "@/lib/cyberguard-api";
 import { useDemoStore } from "@/lib/store";
 import type { ApprovalDecision } from "@/lib/types";
 
@@ -66,17 +65,12 @@ function Approvals() {
     setSaving(true);
     setDecisionError("");
     try {
-      if (isCyberguardApiConfigured) {
-        await cyberguardApi.decideApproval(selected.incidentId, selected.decision);
-        toast.success("Decision sent to the configured backend", {
-          description: "The local demo view will reflect the analyst decision.",
-        });
-      } else {
-        toast.success("Simulated decision recorded", {
-          description: "No backend or external response action is connected.",
-        });
-      }
+      // Queue items are demo fixtures; their decisions live in the demo store and audit log.
+      // Investigations from the Investigate page are approved there and saved to Supabase.
       recordDecision(selected.incidentId, selected.decision, justification.trim());
+      toast.success(selected.decision === "approved" ? "Approval recorded" : "Rejection recorded", {
+        description: "Logged in the audit trail. No mailbox action was performed.",
+      });
       setSelected(null);
     } catch (error) {
       const message =

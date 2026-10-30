@@ -5,6 +5,23 @@ const apiBaseUrl = import.meta.env["VITE_CYBERGUARD_API_URL"]?.replace(/\/+$/, "
 const healthSchema = z.object({
   status: z.enum(["ok", "degraded"]),
   version: z.string().optional(),
+  database: z.enum(["connected", "not_configured", "error"]).optional(),
+});
+
+const savedInvestigationSchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  subject: z.string(),
+  sender: z.string(),
+  risk: z.enum(["low", "medium", "high", "critical"]),
+  riskScore: z.number(),
+  status: z.string(),
+});
+
+const investigationAuditSchema = z.object({
+  at: z.string(),
+  event: z.string(),
+  detail: z.string(),
 });
 
 const incidentSchema = z.object({
@@ -66,6 +83,7 @@ const recommendedActionSchema = z.object({
   target: z.string(),
   impact: z.string(),
   status: z.literal("pending_approval"),
+  recordId: z.string().nullable().optional(),
 });
 
 const analysisSchema = z.object({
@@ -75,9 +93,13 @@ const analysisSchema = z.object({
   evidence: z.array(z.string()),
   explanation: z.string(),
   incidentId: z.string().optional(),
+  persisted: z.boolean().optional(),
   agents: z.array(investigationAgentSchema).optional(),
   recommendedActions: z.array(recommendedActionSchema).optional(),
 });
+
+export type SavedInvestigation = z.infer<typeof savedInvestigationSchema>;
+export type InvestigationAuditEntry = z.infer<typeof investigationAuditSchema>;
 
 export type CyberguardIncident = z.infer<typeof incidentSchema>;
 export type CyberguardAgent = z.infer<typeof agentSchema>;
@@ -143,14 +165,16 @@ export const cyberguardApi = {
       method: "POST",
       body: JSON.stringify(input),
     }),
-  decideApproval: (id: string, decision: "approved" | "rejected") =>
+  listInvestigations: () => request("/api/investigations", z.array(savedInvestigationSchema)),
+  investigationAudit: (investigationId: string) =>
     request(
-      `/api/approvals/${encodeURIComponent(id)}/decision`,
-      z.object({
-        id: z.string(),
-        status: z.enum(["approved", "rejected"]),
-        message: z.string().optional(),
-      }),
+      `/api/investigations/${encodeURIComponent(investigationId)}/audit`,
+      z.array(investigationAuditSchema),
+    ),
+  decideAction: (investigationId: string, actionId: string, decision: "approved" | "rejected") =>
+    request(
+      `/api/investigations/${encodeURIComponent(investigationId)}/actions/${encodeURIComponent(actionId)}/decision`,
+      z.object({ id: z.string(), status: z.string(), decidedAt: z.string().nullable() }),
       { method: "POST", body: JSON.stringify({ decision }) },
     ),
 };

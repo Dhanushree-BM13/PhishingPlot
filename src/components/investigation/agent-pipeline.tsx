@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
-import { Bot, Check, CircleAlert, ShieldCheck, X } from "lucide-react";
+import { Bot, Check, CircleAlert, Database, Loader2, ShieldCheck, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { InvestigationAgent, RecommendedAction } from "@/lib/cyberguard-api";
+import {
+  cyberguardApi,
+  type InvestigationAgent,
+  type InvestigationAuditEntry,
+  type RecommendedAction,
+} from "@/lib/cyberguard-api";
 import { useReducedMotion } from "@/lib/motion";
 
 const STEP_MS = 650;
@@ -98,12 +103,55 @@ export function AgentPipeline({ agents }: { agents: InvestigationAgent[] }) {
 
 type Decision = { status: "approved" | "rejected"; at: string };
 
-export function ActionApprovals({ actions }: { actions: RecommendedAction[] }) {
+export function ActionApprovals({
+  actions,
+  investigationId,
+}: {
+  actions: RecommendedAction[];
+  investigationId?: string | undefined;
+}) {
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
-  useEffect(() => setDecisions({}), [actions]);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [storedAudit, setStoredAudit] = useState<InvestigationAuditEntry[] | null>(null);
+  const persisted = Boolean(investigationId);
 
-  const decide = (id: string, status: Decision["status"]) =>
-    setDecisions((current) => ({ ...current, [id]: { status, at: new Date().toISOString() } }));
+  useEffect(() => {
+    setDecisions({});
+    setError("");
+    setStoredAudit(null);
+    if (!investigationId) return;
+    void cyberguardApi
+      .investigationAudit(investigationId)
+      .then(setStoredAudit)
+      .catch(() => setStoredAudit(null));
+  }, [actions, investigationId]);
+
+  const decide = async (action: RecommendedAction, status: Decision["status"]) => {
+    setError("");
+    if (investigationId && action.recordId) {
+      setSaving(action.id);
+      try {
+        const saved = await cyberguardApi.decideAction(investigationId, action.recordId, status);
+        setDecisions((current) => ({
+          ...current,
+          [action.id]: { status, at: saved.decidedAt ?? new Date().toISOString() },
+        }));
+        setStoredAudit(await cyberguardApi.investigationAudit(investigationId));
+      } catch (decisionError) {
+        setError(
+          decisionError instanceof Error ? decisionError.message : "The decision was not saved.",
+        );
+      } finally {
+        setSaving(null);
+      }
+      return;
+    }
+    setDecisions((current) => ({
+      ...current,
+      [action.id]: { status, at: new Date().toISOString() },
+    }));
+  };
   const log = Object.entries(decisions);
 
   return (
@@ -138,10 +186,25 @@ export function ActionApprovals({ actions }: { actions: RecommendedAction[] }) {
                 </Badge>
               ) : (
                 <div className="flex gap-2">
-                  <Button onClick={() => decide(action.id, "approved")} size="sm" variant="outline">
-                    <Check aria-hidden="true" /> Approve
+                  <Button
+                    disabled={saving !== null}
+                    onClick={() => void decide(action, "approved")}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {saving === action.id ? (
+                      <Loader2 aria-hidden="true" className="animate-spin" />
+                    ) : (
+                      <Check aria-hidden="true" />
+                    )}
+                    Approve
                   </Button>
-                  <Button onClick={() => decide(action.id, "rejected")} size="sm" variant="ghost">
+                  <Button
+                    disabled={saving !== null}
+                    onClick={() => void decide(action, "rejected")}
+                    size="sm"
+                    variant="outline"
+                  >
                     <X aria-hidden="true" /> Reject
                   </Button>
                 </div>
@@ -149,7 +212,26 @@ export function ActionApprovals({ actions }: { actions: RecommendedAction[] }) {
             </div>
           );
         })}
-        {log.length > 0 && (
+        {error && (
+          <p className="text-xs text-status-invalid" role="alert">
+            {error}
+          </p>
+        )}
+        {persisted && storedAudit && (
+          <div className="border-t border-white/5 pt-3">
+            <p className="cg-eyebrow flex items-center gap-2">
+              <Database aria-hidden="true" className="size-3" /> Audit trail · stored in Supabase
+            </p>
+            <ul className="mt-2 space-y-1 font-mono text-[0.7rem] text-muted-foreground">
+              {storedAudit.map((entry) => (
+                <li key={`${entry.at}-${entry.event}`}>
+                  {entry.at.slice(11, 19)} UTC · {entry.event} · {entry.detail}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {!persisted && log.length > 0 && (
           <div className="border-t border-white/5 pt-3">
             <p className="cg-eyebrow">AUDIT TRAIL</p>
             <ul className="mt-2 space-y-1 font-mono text-[0.7rem] text-muted-foreground">
