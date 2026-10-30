@@ -1,75 +1,120 @@
-# 🛡️ PHISHPILOT
-### Agentic AI & Multi-Agent System for Phishing Incident Investigation and Response
+# PHISHPILOT
 
-**Team Name:** Blueprints Architects  
-**Team ID:** AH-10
+PHISHPILOT is a responsive security operations dashboard for phishing incident
+triage and response. The interface demonstrates an analyst workflow for reviewing
+reported emails, monitoring investigation agents, assessing risk, and reviewing
+proposed response actions.
 
-## 📌 Problem Statement
-Phishing emails are handled manually, making investigation slow and inconsistent. Analysts may miss suspicious links, domains, and evidence, leading to account takeovers and data exposure.
+> **Analysis limitations:** The local demo uses sample data. When configured,
+> the backend runs deterministic, offline heuristics; it does not call an LLM,
+> visit URLs, scan attachments, or execute mail/security actions. Every response
+> item remains a proposal for a human decision.
 
-## 💡 Proposed Solution
-PhishPilot is an AI-powered multi-agent system that investigates phishing emails, analyzes suspicious URLs, assesses risks, and recommends safe response actions with human approval.
+## Features
 
-## 🤖 AI Agents
+- Security overview with incident and approval counts
+- Incident list with search and risk filters
+- Phishing incident submission form
+- Offline analysis agent activity and heuristic risk scores
+- Human approval queue with decisions persisted in Supabase
+- Audit log view
+- Responsive sidebar navigation and PHISHPILOT branding
 
-1. **Triage Agent** – Extracts sender details, links, and suspicious indicators.
-2. **Investigation Agent** – Checks URLs, domains, and security logs.
-3. **Risk Reviewer Agent** – Analyzes evidence and calculates risk levels.
-4. **Response Agent** – Recommends actions for analyst approval.
+## Showcase and demo data
 
-## ⚙️ Key Features
-- Phishing email and URL submission.
-- Automated multi-agent investigation.
-- Evidence collection and analysis.
-- Low, Medium, and High risk classification.
-- Human approval mechanism.
-- Incident management dashboard.
-- Audit logs and investigation history.
+The public landing page's scenario previews use local fixtures from `src/data/demo/`.
+Every incident count, status, verdict, and link observation shown in those sections
+is demo data, not a live operational metric. The fixtures illustrate deterministic,
+offline analysis; they do not represent real customers or threat intelligence.
 
-## 🏗️ Technology Stack
+The showcase is illustrative. Real FastAPI-backed agent orchestration and live link
+scanning are not implemented. Offline analysis cannot re-scan links at click time.
+Approvals expire and can be invalidated on re-check to mitigate this limitation.
+Approval records a decision only. No external action is executed.
 
-- **Frontend:** React, TypeScript, Tailwind CSS
-- **Backend:** Python, FastAPI
-- **Database:** Supabase (PostgreSQL)
-- **AI:** LLM-based agents and orchestration
+## Tech stack
 
-## 🔄 Workflow
+- React 19 and TypeScript
+- TanStack Start and TanStack Router
+- Vite
+- Tailwind CSS 4
+- Vitest and Testing Library
+- FastAPI and Supabase Auth/PostgREST
 
-1. User submits a suspicious email or URL.
-2. Triage Agent extracts indicators.
-3. Investigation Agent collects evidence.
-4. Risk Reviewer evaluates the threat.
-5. Response Agent generates recommendations.
-6. Human analyst approves or rejects the action.
-7. Final results are stored in the database.
+## Requirements
 
-## 🔐 Security
-- Secure authentication.
-- Role-based access control.
-- Row Level Security (RLS).
-- Human approval before response actions.
-- Auditable incident records.
+- Node.js compatible with the versions required by the installed Vite 8 toolchain
+- npm
 
-## 🎯 Expected Outcome
-A working prototype that makes phishing investigation faster, smarter, more transparent, and reliable through multi-agent collaboration.
+## Run locally
 
-## 🚀 Future Scope
-- Real-time phishing detection.
-- Advanced threat intelligence integration.
-- Email security platform integration.
-- Automated incident reporting.
+From the project directory:
 
-## 👥 Team Members
-- Dhanushree B M
-- Mahima Bharadwaj
-- Amulya R
+```sh
+npm install
+npm run dev -- --host 127.0.0.1
+```
 
-**Team:** Blueprints Architects
+Open the local URL printed by Vite in your browser. The port may vary if the
+default port is already in use.
 
----
+## Backend configuration
 
-### ⚠️ Prototype Note
-The initial prototype uses synthetic data and simulated response actions. No real inbox access, automatic account disabling, or live domain blocking is performed.
+Copy `.env.example` to `.env.local` and set the public Supabase project URL/key
+and FastAPI URL:
 
-## 📄 License
-This project is developed for hackathon and educational purposes.
+```dotenv
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+Apply `supabase/migrations/20261030000000_phishpilot_schema.sql` to the Supabase
+project (for example, through the Supabase SQL editor). It creates the incident,
+agent-run, approval, and audit tables and enables per-user row-level security.
+The backend forwards the signed-in user's access token to Supabase so Postgres
+RLS policies apply; never put a service-role key in the frontend.
+
+Run the API from the repository root:
+
+```powershell
+Copy-Item backend\.env.example backend\.env
+# Fill backend\.env with the same Supabase project URL and anon key.
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload
+```
+
+Set `FRONTEND_ORIGINS` in `backend\.env` if the frontend uses a different origin.
+Endpoints include `GET/POST /incidents`, `GET /agents`, `GET /approvals`,
+`POST /approvals/{id}/decision`, `GET /audit-logs`, and unauthenticated
+`GET /health`. All application endpoints except health require a valid Supabase
+session. The submitted email content is stored in the user's RLS-protected
+incident row; configure appropriate data-retention and access policies before
+using real incident data.
+
+Approving or rejecting a proposal records the analyst decision only. No external
+response action is executed. Heuristic outputs are not AI/model findings and
+must not be treated as a definitive phishing verdict.
+
+## Quality checks
+
+```sh
+npm test
+npm run lint
+npm run build
+```
+
+Backend unit tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest backend\tests
+```
+
+## Project layout
+
+- `src/routes/` — dashboard and analyst workflow pages
+- `src/components/` — shared interface components
+- `src/lib/api.ts` — API configuration and incident submission
+- `src/lib/sample-data.ts` — clearly labeled example incidents, approvals, and
+  audit entries
+- `public/phishpilot-official-logo.png` — official PHISHPILOT logo and favicon

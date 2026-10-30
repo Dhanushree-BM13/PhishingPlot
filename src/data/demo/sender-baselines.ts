@@ -1,0 +1,15 @@
+export const senderBaselineFixture = {
+  senderAddress: "ap@partner.example",
+  sampleSize: 8,
+  knownLinkDomains: ["portal.partner.example"],
+  knownAttachmentTypes: ["application/pdf"],
+  knownReplyTo: ["ap@partner.example"],
+  knownInfraFingerprints: ["mx.partner.example"],
+  sendHourRange: [8, 17] as [number, number],
+  hasRequestedPayment: false,
+  hasRequestedCredentials: false,
+  hasRequestedBankDetailChanges: false,
+  medianLength: 162,
+  urgencyRate: 0,
+  fixtureLabel: "Eight prior benign messages",
+};
