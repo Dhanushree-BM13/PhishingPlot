@@ -13,14 +13,37 @@ class StoreError(RuntimeError):
     """Supabase rejected or could not complete a request."""
 
 
+# First non-empty name wins. The fallbacks are what Vercel's Supabase integration sets.
+URL_NAMES = ("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL")
+KEY_NAMES = ("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY")
+
+
+def _first_env(names: tuple[str, ...]) -> str:
+    for name in names:
+        value = os.environ.get(name, "").strip().strip('"').strip("'")
+        if value:
+            return value
+    return ""
+
+
 def _config() -> tuple[str, str] | None:
-    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    key = os.environ.get("SUPABASE_SECRET_KEY", "")
+    url = _first_env(URL_NAMES).rstrip("/")
+    key = _first_env(KEY_NAMES)
     return (url, key) if url and key else None
 
 
 def is_configured() -> bool:
     return _config() is not None
+
+
+def missing_settings() -> list[str]:
+    """Names (never values) of required settings that are not set, for the health endpoint."""
+    missing = []
+    if not _first_env(URL_NAMES):
+        missing.append(URL_NAMES[0])
+    if not _first_env(KEY_NAMES):
+        missing.append(KEY_NAMES[0])
+    return missing
 
 
 async def _request(

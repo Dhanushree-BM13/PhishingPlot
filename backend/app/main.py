@@ -111,8 +111,15 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/api/health")
-async def api_health() -> dict[str, str]:
-    return {"status": "ok", "version": app.version, "database": await investigation_store.ping()}
+async def api_health() -> dict[str, Any]:
+    health: dict[str, Any] = {
+        "status": "ok",
+        "version": app.version,
+        "database": await investigation_store.ping(),
+    }
+    if missing := investigation_store.missing_settings():
+        health["missing"] = missing
+    return health
 
 
 @app.post("/api/analyze")

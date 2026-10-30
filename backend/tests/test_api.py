@@ -80,3 +80,10 @@ def test_failing_agent_is_recorded_without_crashing(monkeypatch) -> None:
     assert response.status_code == 200
     assert statuses["investigator"] == "failed"
     assert statuses["triage"] == "completed"
+
+
+def test_health_names_missing_database_settings() -> None:
+    data = client.get("/api/health").json()
+
+    assert data["database"] == "not_configured"
+    assert data["missing"] == ["SUPABASE_SECRET_KEY"] or "SUPABASE_SECRET_KEY" in data["missing"]
