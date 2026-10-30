@@ -201,7 +201,7 @@ function ChallengeCard({
         <span className="guide-number">{number}</span>
         <h2 className="text-lg font-semibold">{title}</h2>
       </div>
-      <p className="mt-1 text-sm text-rose-300/90">Trap: {trap}</p>
+      <p className="mt-1 text-sm text-status-invalid/90">Trap: {trap}</p>
       <div className="guide-visual">{children}</div>
       <p className="guide-say">“{say}”</p>
       <div className="mt-4">{action}</div>

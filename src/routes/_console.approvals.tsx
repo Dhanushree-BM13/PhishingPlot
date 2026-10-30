@@ -100,7 +100,7 @@ function Approvals() {
       </header>
 
       <div className="cg-note">
-        <ShieldCheck aria-hidden="true" className="size-4 shrink-0 text-cyan-300" />
+        <ShieldCheck aria-hidden="true" className="size-4 shrink-0 text-primary" />
         <p>
           Response actions remain proposals. No message is blocked, quarantined, deleted, or sent by
           the local demo.
@@ -133,7 +133,7 @@ function Approvals() {
                     </span>
                   </div>
                   <Link
-                    className="mt-3 inline-flex items-center gap-2 text-base font-semibold hover:text-cyan-200"
+                    className="mt-3 inline-flex items-center gap-2 text-base font-semibold hover:text-primary"
                     params={{ id: incident.id }}
                     to="/incidents/$id"
                   >
@@ -165,7 +165,7 @@ function Approvals() {
                             className="flex gap-2 text-xs leading-relaxed text-muted-foreground"
                             key={item}
                           >
-                            <span className="mt-1 size-1 shrink-0 rounded-full bg-cyan-300" />
+                            <span className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
                             {item}
                           </li>
                         ))}
@@ -208,7 +208,7 @@ function Approvals() {
         {pending.length === 0 && (
           <Card className="cg-panel">
             <CardContent className="flex min-h-48 flex-col items-center justify-center text-center">
-              <Check aria-hidden="true" className="size-8 text-emerald-300" />
+              <Check aria-hidden="true" className="size-8 text-status-valid" />
               <p className="mt-3 font-medium">Queue clear</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 No open demo incidents currently need a decision.
@@ -227,7 +227,7 @@ function Approvals() {
         <AlertDialogContent className="cg-panel">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle aria-hidden="true" className="size-4 text-amber-300" />
+              <AlertTriangle aria-hidden="true" className="size-4 text-status-escalated" />
               Confirm {selected?.decision === "approved" ? "approval" : "rejection"}?
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -247,7 +247,7 @@ function Approvals() {
             </label>
           )}
           {decisionError && (
-            <p className="text-xs text-rose-300" role="alert">
+            <p className="text-xs text-status-invalid" role="alert">
               {decisionError}
             </p>
           )}
@@ -256,7 +256,7 @@ function Approvals() {
             <AlertDialogAction
               className={
                 selected?.decision === "rejected"
-                  ? "bg-rose-500 text-white hover:bg-rose-400"
+                  ? "bg-status-invalid text-white hover:bg-status-invalid"
                   : "cg-primary-button"
               }
               disabled={saving}

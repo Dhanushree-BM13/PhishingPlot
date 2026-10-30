@@ -176,10 +176,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
           className="inline-flex items-center gap-2"
           {...dashboardLinkProps()}
         >
-          <Shield aria-hidden="true" className="size-5 text-cyan-300" />
+          <Shield aria-hidden="true" className="size-5 text-primary" />
           {!collapsed && (
             <span className="text-sm font-bold tracking-[0.12em]">
-              PHISH<span className="text-cyan-300">PILOT</span>
+              PHISH<span className="text-primary">PILOT</span>
             </span>
           )}
         </Link>
@@ -372,6 +372,40 @@ export function AppShell() {
   const title =
     routeTitles[pathname] ??
     (pathname.startsWith("/incidents/") ? "Incident detail" : "PhishPilot");
+
+  if (pathname === "/") {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
+          <nav className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
+            <Link className="flex items-center gap-2" to="/">
+              <Shield aria-hidden="true" className="size-5 text-primary" />
+              <span className="text-sm font-bold tracking-[0.12em]">
+                PHISH<span className="text-primary">PILOT</span>
+              </span>
+            </Link>
+            <div className="ml-auto hidden items-center gap-5 text-sm text-muted-foreground md:flex">
+              <a className="hover:text-foreground" href="#how">
+                How it works
+              </a>
+              <Link className="hover:text-foreground" to="/hurdle-guide">
+                The hurdle
+              </Link>
+              <Link className="hover:text-foreground" to="/investigation">
+                Live analysis
+              </Link>
+            </div>
+            <Button asChild className="cg-primary-button ml-auto md:ml-0" size="sm">
+              <Link search={{ scenario: undefined }} to="/dashboard">
+                Open console
+              </Link>
+            </Button>
+          </nav>
+        </header>
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
     <div className="cg-shell min-h-screen bg-background text-foreground">

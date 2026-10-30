@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, ShieldAlert } from "lucide-react";
 
+import { CountUp } from "@/components/dashboard/live-widgets";
 import { ApprovalWorkflow } from "@/components/incidents/approval-workflow";
 import { BaselineCompare } from "@/components/hurdle/baseline-compare";
 import { EmailPreview } from "@/components/hurdle/email-preview";
@@ -48,11 +49,13 @@ function IncidentDetail() {
   );
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+    <div className="cg-page space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-border pb-5">
         <div className="min-w-0">
-          <p className="font-mono text-xs text-muted-foreground">{incident.id}</p>
-          <h1 className="mt-1 break-words text-2xl font-semibold">{incident.subject}</h1>
+          <p className="cg-eyebrow">{incident.id}</p>
+          <h1 className="mt-2 break-words font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            {incident.subject}
+          </h1>
           <p className="mt-2 break-all font-mono text-sm text-muted-foreground">
             {incident.sender}
           </p>
@@ -60,11 +63,20 @@ function IncidentDetail() {
             Received {store.formatSimulatedTime(incident.receivedAt)} · Demo analyst
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge className="gap-1 border-status-invalid/30 bg-status-invalid/10 text-status-invalid">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="text-right">
+            <p className="cg-eyebrow">Risk score</p>
+            <p
+              className="font-display text-5xl font-extrabold leading-none tracking-tighter tabular-nums"
+              style={{ color: `var(--risk-${incident.risk})` }}
+            >
+              <CountUp value={incident.riskScore} />
+            </p>
+          </div>
+          <span className={`cg-severity severity-${incident.risk}`}>
             <ShieldAlert aria-hidden="true" className="size-3" />
-            Final risk: {incident.risk.toUpperCase()}
-          </Badge>
+            {incident.risk}
+          </span>
           <Badge className="border-border bg-secondary text-secondary-foreground">
             {incident.status}
           </Badge>
@@ -145,16 +157,49 @@ function IncidentDetail() {
             {store.analyzerVerdicts
               .filter((verdict) => verdict.incidentId === incident.id)
               .map((verdict) => (
-                <div className="border border-border p-3" key={verdict.id}>
-                  <p className="text-sm font-medium">{verdict.analyzerId}</p>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {verdict.level} · {verdict.score}/100 · {Math.round(verdict.confidence * 100)}%
-                    confidence
-                  </p>
-                  <p className="mt-2 text-sm leading-5">{verdict.rationale}</p>
-                  <p className="mt-2 font-mono text-xs text-muted-foreground">
-                    Signals: {verdict.signalIds.join(", ")}
-                  </p>
+                <div
+                  className="verdict-card border border-border p-4"
+                  key={verdict.id}
+                  style={{ borderTopColor: `var(--risk-${verdict.level})` }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold capitalize">
+                        {verdict.analyzerId.replaceAll("_", " ")}
+                      </p>
+                      <span className={`cg-severity severity-${verdict.level} mt-2`}>
+                        {verdict.level}
+                      </span>
+                    </div>
+                    <p
+                      className="font-display text-4xl font-extrabold leading-none tracking-tighter tabular-nums"
+                      style={{ color: `var(--risk-${verdict.level})` }}
+                    >
+                      <CountUp value={verdict.score} />
+                    </p>
+                  </div>
+                  <div className="cg-risk-track mt-3">
+                    <span
+                      style={{
+                        width: `${verdict.score}%`,
+                        background: `var(--risk-${verdict.level})`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-3 text-sm leading-5">{verdict.rationale}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {verdict.signalIds.map((signal) => (
+                      <span
+                        className="rounded-sm border border-border bg-muted px-1.5 py-0.5 font-mono text-[0.62rem]"
+                        key={signal}
+                      >
+                        {signal}
+                      </span>
+                    ))}
+                    <span className="ml-auto font-mono text-[0.66rem] text-muted-foreground">
+                      {Math.round(verdict.confidence * 100)}% confidence
+                    </span>
+                  </div>
                 </div>
               ))}
           </CardContent>

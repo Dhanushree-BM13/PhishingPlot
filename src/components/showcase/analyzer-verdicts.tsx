@@ -22,10 +22,10 @@ const analyzerIcons = {
 };
 
 const levelStyles = {
-  low: "border-emerald-300/25 bg-emerald-300/10 text-emerald-200",
-  medium: "border-amber-300/25 bg-amber-300/10 text-amber-100",
-  high: "border-rose-300/25 bg-rose-300/10 text-rose-200",
-  critical: "border-rose-300/40 bg-rose-400/15 text-rose-100",
+  low: "border-status-valid/25 bg-status-valid/10 text-status-valid",
+  medium: "border-status-escalated/25 bg-status-escalated/10 text-status-escalated",
+  high: "border-status-invalid/25 bg-status-invalid/10 text-status-invalid",
+  critical: "border-status-invalid/40 bg-status-invalid/15 text-status-invalid",
 };
 
 export default function AnalyzerVerdicts() {
@@ -37,9 +37,7 @@ export default function AnalyzerVerdicts() {
       className={`showcase-reveal mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 ${isInView ? "is-visible" : ""}`}
       ref={ref}
     >
-      <Badge className="border-indigo-300/25 bg-indigo-300/8 text-indigo-200">
-        {demoDataLabel}
-      </Badge>
+      <Badge className="border-primary/25 bg-primary/8 text-primary">{demoDataLabel}</Badge>
       <h2 className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
         Analyzer verdicts
       </h2>
@@ -48,10 +46,10 @@ export default function AnalyzerVerdicts() {
       </p>
 
       {analyzerVerdictFixture.disagreement.detected && (
-        <Alert className="mt-6 border-amber-300/25 bg-amber-300/5 text-amber-100">
+        <Alert className="mt-6 border-status-escalated/25 bg-status-escalated/5 text-status-escalated">
           <AlertTriangle className="size-4" aria-hidden="true" />
           <AlertTitle>Analysts disagree</AlertTitle>
-          <AlertDescription className="text-amber-100/75">
+          <AlertDescription className="text-status-escalated/75">
             {analyzerVerdictFixture.disagreement.message}
           </AlertDescription>
         </Alert>
@@ -69,7 +67,7 @@ export default function AnalyzerVerdicts() {
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
-                  <Icon className="size-4 shrink-0 text-indigo-200" aria-hidden="true" />
+                  <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
                   <h3 className="truncate font-mono text-sm font-semibold">{verdict.analyzerId}</h3>
                 </div>
                 <Badge className={levelStyles[verdict.level]}>

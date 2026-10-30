@@ -30,7 +30,7 @@ export function AgentPipeline({ agents }: { agents: InvestigationAgent[] }) {
       <CardHeader className="border-b border-white/5">
         <CardTitle className="flex items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-2">
-            <Bot aria-hidden="true" className="size-4 text-cyan-300" />
+            <Bot aria-hidden="true" className="size-4 text-primary" />
             Multi-agent investigation
           </span>
           <span className="font-mono text-[0.65rem] text-muted-foreground">
@@ -65,7 +65,7 @@ export function AgentPipeline({ agents }: { agents: InvestigationAgent[] }) {
                 <div className="agent-result mt-3 space-y-2">
                   <ul className="space-y-1.5 text-xs leading-relaxed">
                     {agent.evidence.map((item) => (
-                      <li className="border-l border-cyan-300/30 pl-2 break-words" key={item}>
+                      <li className="border-l border-primary/30 pl-2 break-words" key={item}>
                         {item}
                       </li>
                     ))}
@@ -74,7 +74,7 @@ export function AgentPipeline({ agents }: { agents: InvestigationAgent[] }) {
                     {failed && (
                       <CircleAlert
                         aria-hidden="true"
-                        className="mr-1 inline size-3.5 text-rose-300"
+                        className="mr-1 inline size-3.5 text-status-invalid"
                       />
                     )}
                     {agent.reasoning}
@@ -111,7 +111,7 @@ export function ActionApprovals({ actions }: { actions: RecommendedAction[] }) {
       <CardHeader className="border-b border-white/5">
         <CardTitle className="flex items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-2">
-            <ShieldCheck aria-hidden="true" className="size-4 text-cyan-300" />
+            <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
             Human approval gate
           </span>
           <Badge className="cg-badge-warning">NOTHING RUNS WITHOUT APPROVAL</Badge>
@@ -127,7 +127,7 @@ export function ActionApprovals({ actions }: { actions: RecommendedAction[] }) {
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium">{action.title}</p>
-                <p className="break-all font-mono text-xs text-cyan-200/80">{action.target}</p>
+                <p className="break-all font-mono text-xs text-primary/80">{action.target}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{action.impact}</p>
               </div>
               {decision ? (

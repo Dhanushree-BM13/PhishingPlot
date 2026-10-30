@@ -197,7 +197,7 @@ function AgentNetwork() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <CircleDot aria-hidden="true" className="size-3 text-cyan-300" />
+          <CircleDot aria-hidden="true" className="size-3 text-primary" />
           {completedRuns} completed demo run{completedRuns === 1 ? "" : "s"} · No external actions
         </p>
         <div className="flex gap-2">
@@ -215,7 +215,7 @@ function AgentNetwork() {
       <Card className="cg-panel">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Sparkles aria-hidden="true" className="size-4 text-cyan-300" />
+            <Sparkles aria-hidden="true" className="size-4 text-primary" />
             Agent boundaries
           </CardTitle>
         </CardHeader>

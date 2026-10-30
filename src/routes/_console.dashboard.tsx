@@ -1,291 +1,249 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import {
-  Activity,
-  ArrowUpRight,
-  Bot,
-  CheckCircle2,
-  Globe2,
-  Mail,
-  ScanSearch,
-  ShieldAlert,
-  Siren,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, ScanSearch } from "lucide-react";
 
-import { BackendStatus } from "@/components/cyberguard/backend-status";
-import { Badge } from "@/components/ui/badge";
+import { CountUp, LiveFeed, ThroughputSparkline } from "@/components/dashboard/live-widgets";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { deriveDemoAlerts, type DemoAlertPriority } from "@/lib/demo-alerts";
 import { useDemoStore } from "@/lib/store";
+import type { RiskLevel } from "@/lib/types";
 
 export const Route = createFileRoute("/_console/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — PhishPilot" }] }),
   component: Dashboard,
 });
 
+const riskLevels: RiskLevel[] = ["critical", "high", "medium", "low"];
+const riskColor: Record<RiskLevel, string> = {
+  critical: "var(--risk-critical)",
+  high: "var(--risk-high)",
+  medium: "var(--risk-medium)",
+  low: "var(--risk-low)",
+};
+const priorityTone: Record<DemoAlertPriority, "critical" | "high" | "medium" | "low"> = {
+  critical: "critical",
+  high: "high",
+  warning: "medium",
+  info: "low",
+};
+const closedStatuses = new Set(["approved", "rejected", "resolved"]);
+const pipeline = ["Triage", "Investigate", "Risk review", "Response", "Human gate"];
+
 function Dashboard() {
-  const { incidents, approvals } = useDemoStore();
-  const metrics = [
-    { label: "Emails analyzed", value: incidents.length, icon: Mail, note: "synthetic samples" },
-    {
-      label: "Phishing incidents",
-      value: incidents.filter((incident) => incident.riskScore >= 40).length,
-      icon: ShieldAlert,
-      note: "demo risk ≥ 40",
-    },
-    {
-      label: "Critical threats",
-      value: incidents.filter((incident) => incident.risk === "critical").length,
-      icon: Siren,
-      note: "immediate review",
-    },
-    {
-      label: "Pending approvals",
-      value: incidents.filter((incident) => incident.status === "awaiting_approval").length,
-      icon: CheckCircle2,
-      note: "human decision required",
-    },
-  ];
-  const chartData = ["critical", "high", "medium", "low"].map((level) => ({
+  const { incidents, approvals, decisions } = useDemoStore();
+  const open = incidents.filter((incident) => !closedStatuses.has(incident.status));
+  const urgent = open.filter(
+    (incident) => incident.risk === "critical" || incident.risk === "high",
+  );
+  const pending = incidents.filter((incident) =>
+    ["awaiting_approval", "escalated", "needs_rereview"].includes(incident.status),
+  );
+  const brokenApprovals = approvals.filter(
+    (approval) => approval.state === "stale" || approval.state === "invalidated",
+  );
+  const distribution = riskLevels.map((level) => ({
     level,
     count: incidents.filter((incident) => incident.risk === level).length,
   }));
-  const recentIncidents = [...incidents]
-    .sort((left, right) => right.receivedAt.localeCompare(left.receivedAt))
-    .slice(0, 5);
+  const queue = [...incidents].sort((left, right) => right.riskScore - left.riskScore);
+  const alertSeed = deriveDemoAlerts(incidents, approvals)
+    .slice(0, 4)
+    .map((alert) => ({
+      id: alert.id,
+      tone: priorityTone[alert.priority],
+      source: "alert",
+      text: `${alert.title} · ${alert.incidentId}`,
+      incidentId: alert.incidentId,
+    }));
+
+  const metrics = [
+    { label: "Incidents", value: incidents.length, note: "in the queue" },
+    { label: "Open", value: open.length, note: "awaiting closure" },
+    { label: "Need a decision", value: pending.length, note: "human approval" },
+    { label: "Approvals broken", value: brokenApprovals.length, note: "stale or invalidated" },
+    { label: "Decisions", value: decisions.length, note: "recorded this session" },
+  ];
 
   return (
-    <div className="cg-page space-y-5">
+    <div className="cg-page space-y-6">
       <header className="cg-page-heading">
         <div>
-          <p className="cg-eyebrow">SECURITY OPERATIONS / THREAT OVERVIEW</p>
+          <p className="cg-eyebrow">SOC · overview</p>
           <h1>Threat command center</h1>
-          <p>AI-assisted phishing investigation with analyst-controlled response.</p>
+          <p>Every reported email, its risk and the decision it is waiting for.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <BackendStatus />
-          <Badge className="cg-badge-demo">SYNTHETIC DATA</Badge>
-        </div>
+        <Button asChild className="cg-primary-button">
+          <Link to="/investigation">
+            <ScanSearch aria-hidden="true" /> Investigate an email
+          </Link>
+        </Button>
       </header>
 
-      <section aria-label="Security metrics" className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-        {metrics.map(({ label, value, icon: Icon, note }, index) => (
-          <Card
-            className="cg-panel cg-metric-card"
-            key={label}
-            style={{ animationDelay: `${index * 70}ms` }}
+      <section className="cg-panel grid gap-6 p-5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
+        <div>
+          <p className="cg-eyebrow">Urgent now</p>
+          <p className="dash-hero-number" style={{ color: "var(--risk-critical)" }}>
+            <CountUp value={urgent.length} />
+          </p>
+          <p className="text-xs text-muted-foreground">open high or critical</p>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <p className="cg-eyebrow">Risk distribution</p>
+            <span className="cg-live-indicator">
+              <span /> Simulated feed
+            </span>
+          </div>
+          <div aria-label="Incidents by risk" className="dash-stack mt-3" role="img">
+            {distribution
+              .filter((item) => item.count > 0)
+              .map((item, index) => (
+                <span
+                  key={item.level}
+                  style={{
+                    flexGrow: item.count,
+                    background: riskColor[item.level],
+                    animationDelay: `${index * 120}ms`,
+                  }}
+                  title={`${item.level}: ${item.count}`}
+                />
+              ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+            {distribution.map((item) => (
+              <span className="flex items-center gap-2 text-xs" key={item.level}>
+                <span className="size-2" style={{ background: riskColor[item.level] }} />
+                <span className="capitalize text-muted-foreground">{item.level}</span>
+                <span className="font-mono">{item.count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="lg:w-72">
+          <ThroughputSparkline />
+        </div>
+      </section>
+
+      <section
+        aria-label="Key metrics"
+        className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-5"
+      >
+        {metrics.map((metric, index) => (
+          <div
+            className="dash-metric bg-card p-5"
+            key={metric.label}
+            style={{ animationDelay: `${index * 60}ms` }}
           >
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <p className="text-xs font-medium text-muted-foreground">{label}</p>
-                <Icon aria-hidden="true" className="size-4 text-cyan-300" />
-              </div>
-              <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">{value}</p>
-              <p className="mt-1 text-[10px] text-muted-foreground">{note}</p>
-            </CardContent>
-          </Card>
+            <p className="text-xs text-muted-foreground">{metric.label}</p>
+            <p className="mt-2 font-display text-4xl font-bold tracking-tight tabular-nums">
+              <CountUp value={metric.value} />
+            </p>
+            <p className="mt-1 font-mono text-[0.66rem] uppercase text-muted-foreground">
+              {metric.note}
+            </p>
+          </div>
         ))}
       </section>
 
-      <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
-        <Card className="cg-panel overflow-hidden">
-          <CardHeader className="flex-row items-start justify-between border-b border-white/5 px-5 py-4">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]">
+        <div className="cg-panel">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <div>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Globe2 aria-hidden="true" className="size-4 text-cyan-300" />
-                Threat surface
-              </CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Open incidents by risk tier · synthetic data
-              </p>
-            </div>
-            <span className="cg-live-indicator">
-              <span /> SIMULATION
-            </span>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-3">
-              {[
-                [
-                  "Critical",
-                  `${incidents.filter((item) => item.risk === "critical").length}`,
-                  "critical",
-                ],
-                ["Elevated", `${incidents.filter((item) => item.risk === "high").length}`, "high"],
-                [
-                  "Monitored",
-                  `${incidents.filter((item) => item.risk === "medium" || item.risk === "low").length}`,
-                  "normal",
-                ],
-              ].map(([label, amount, tone]) => (
-                <div className="cg-threat-legend" key={label}>
-                  <span className={`cg-threat-dot ${tone}`} />
-                  <span className="text-xs text-muted-foreground">{label}</span>
-                  <span className="ml-auto font-mono text-xs">{amount}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="cg-panel">
-          <CardHeader className="border-b border-white/5 px-5 py-4">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Activity aria-hidden="true" className="size-4 text-cyan-300" />
-              Threat severity
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Current fixture distribution · not live telemetry
-            </p>
-          </CardHeader>
-          <CardContent className="h-[270px] p-4">
-            <ResponsiveContainer height="100%" width="100%">
-              <BarChart
-                data={chartData}
-                layout="vertical"
-                margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid
-                  horizontal={false}
-                  stroke="rgba(125,190,220,.09)"
-                  strokeDasharray="3 5"
-                />
-                <XAxis
-                  allowDecimals={false}
-                  axisLine={false}
-                  tick={{ fill: "#8294aa", fontSize: 10 }}
-                  tickLine={false}
-                  type="number"
-                />
-                <YAxis
-                  axisLine={false}
-                  dataKey="level"
-                  tick={{ fill: "#a8bad0", fontSize: 10 }}
-                  tickLine={false}
-                  type="category"
-                  width={58}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "#0b1626",
-                    border: "1px solid rgba(85,170,210,.2)",
-                    borderRadius: 8,
-                    color: "#e5f3ff",
-                  }}
-                />
-                <Bar dataKey="count" fill="#39cce8" maxBarSize={20} radius={[0, 5, 5, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(17rem,0.6fr)]">
-        <Card className="cg-panel overflow-hidden">
-          <CardHeader className="flex-row items-center justify-between border-b border-white/5 px-5 py-4">
-            <div>
-              <CardTitle className="text-sm">Recent incidents</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Fixture-backed investigation queue
-              </p>
+              <h2 className="text-base font-semibold">Triage queue</h2>
+              <p className="text-xs text-muted-foreground">Sorted by risk score</p>
             </div>
             <Button asChild size="sm" variant="outline">
               <Link to="/incidents">
                 All incidents <ArrowUpRight aria-hidden="true" />
               </Link>
             </Button>
-          </CardHeader>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="cg-table w-full min-w-[620px] text-left text-xs">
-              <thead>
-                <tr>
-                  <th>Incident</th>
-                  <th>Severity</th>
-                  <th>Score</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentIncidents.map((incident) => (
-                  <tr key={incident.id}>
-                    <td>
-                      <Link
-                        className="font-medium hover:text-cyan-200"
-                        params={{ id: incident.id }}
-                        to="/incidents/$id"
-                      >
-                        {incident.subject}
-                      </Link>
-                      <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
-                        {incident.id} · {incident.sender}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`cg-severity severity-${incident.risk}`}>
-                        {incident.risk}
-                      </span>
-                    </td>
-                    <td className="font-mono tabular-nums">{incident.riskScore}</td>
-                    <td className="text-muted-foreground">
-                      {incident.status.replaceAll("_", " ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-
-        <Card className="cg-panel">
-          <CardHeader className="border-b border-white/5 px-5 py-4">
-            <CardTitle className="text-sm">System status</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Environment and workflow health</p>
-          </CardHeader>
-          <CardContent className="space-y-1 p-3">
-            <div className="cg-system-row">
-              <span className="cg-system-icon">
-                <Bot aria-hidden="true" />
-              </span>
-              <span>
-                <strong>Agent orchestrator</strong>
-                <small>Demo workflow ready</small>
-              </span>
-              <span className="cg-system-ok">READY</span>
-            </div>
-            <div className="cg-system-row">
-              <span className="cg-system-icon">
-                <CheckCircle2 aria-hidden="true" />
-              </span>
-              <span>
-                <strong>Human approval gate</strong>
-                <small>{approvals.length} sample decisions available</small>
-              </span>
-              <span className="cg-system-ok">ACTIVE</span>
-            </div>
-            <div className="cg-system-row">
-              <span className="cg-system-icon">
-                <Activity aria-hidden="true" />
-              </span>
-              <span>
-                <strong>Incident telemetry</strong>
-                <small>Local fixture stream</small>
-              </span>
-              <span className="cg-system-demo">DEMO</span>
-            </div>
-          </CardContent>
-          <div className="flex flex-wrap gap-2 border-t border-white/5 px-4 py-4">
-            <Button asChild className="cg-primary-button" size="sm">
-              <Link to="/investigation">
-                <ScanSearch aria-hidden="true" /> Investigate email
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/agents">
-                <Bot aria-hidden="true" /> Agent network
-              </Link>
-            </Button>
           </div>
-        </Card>
+          <ul className="divide-y divide-border">
+            {queue.map((incident) => (
+              <li key={incident.id}>
+                <Link
+                  className="dash-row grid grid-cols-[3px_minmax(0,1fr)_auto] items-center gap-4 py-3 pr-5"
+                  params={{ id: incident.id }}
+                  to="/incidents/$id"
+                >
+                  <span className="h-full" style={{ background: riskColor[incident.risk] }} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{incident.subject}</span>
+                    <span className="block truncate font-mono text-[0.68rem] text-muted-foreground">
+                      {incident.id} · {incident.sender}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-4">
+                    <span className="hidden text-xs capitalize text-muted-foreground sm:inline">
+                      {incident.status.replaceAll("_", " ")}
+                    </span>
+                    <span className="dash-score">
+                      <span
+                        style={{
+                          width: `${incident.riskScore}%`,
+                          background: riskColor[incident.risk],
+                        }}
+                      />
+                    </span>
+                    <span
+                      className="w-8 text-right font-display text-lg font-bold tabular-nums"
+                      style={{ color: riskColor[incident.risk] }}
+                    >
+                      {incident.riskScore}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="cg-panel">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <h2 className="flex items-center gap-2 text-base font-semibold">
+              Live activity
+              <span className="cg-live-indicator">
+                <span /> Simulated
+              </span>
+            </h2>
+            <Link className="text-xs text-muted-foreground hover:text-primary" to="/alerts">
+              All alerts
+            </Link>
+          </div>
+          <LiveFeed seed={alertSeed} />
+        </div>
+      </section>
+
+      <section className="cg-panel flex flex-wrap items-center justify-between gap-5 p-5">
+        <div>
+          <p className="cg-eyebrow">Agent pipeline</p>
+          <ol className="mt-3 flex flex-wrap items-center gap-2">
+            {pipeline.map((step, index) => (
+              <li className="flex items-center gap-2" key={step}>
+                <span
+                  className="pipeline-step rounded-sm border border-border bg-muted px-2.5 py-1 text-xs font-medium"
+                  style={{ animationDelay: `${index * 0.7}s` }}
+                >
+                  {step}
+                </span>
+                {index < pipeline.length - 1 && (
+                  <ArrowRight aria-hidden="true" className="size-3.5 text-muted-foreground" />
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/hurdle-guide">Hurdle guide</Link>
+          </Button>
+          <Button asChild className="cg-primary-button" size="sm">
+            <Link to="/investigation">
+              Run the agents <ArrowRight aria-hidden="true" />
+            </Link>
+          </Button>
+        </div>
       </section>
     </div>
   );

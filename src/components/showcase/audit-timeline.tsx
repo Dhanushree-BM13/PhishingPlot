@@ -42,9 +42,7 @@ export default function AuditTimeline() {
       className={`showcase-reveal mx-auto max-w-7xl px-5 pb-24 pt-12 sm:px-8 sm:pb-32 ${isInView ? "is-visible" : ""}`}
       ref={ref}
     >
-      <Badge className="border-indigo-300/25 bg-indigo-300/8 text-indigo-200">
-        {demoDataLabel}
-      </Badge>
+      <Badge className="border-primary/25 bg-primary/8 text-primary">{demoDataLabel}</Badge>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
@@ -70,13 +68,13 @@ export default function AuditTimeline() {
                 key={`${event.offsetMinutes}-${event.type}`}
                 style={{ transitionDelay: `${index * 70}ms` }}
               >
-                <span className="z-10 flex size-8 items-center justify-center rounded-full border border-indigo-300/25 bg-[#10131d] text-indigo-200 sm:size-9">
+                <span className="z-10 flex size-8 items-center justify-center rounded-full border border-primary/25 bg-[#10131d] text-primary sm:size-9">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 rounded-xl border border-white/8 bg-black/20 p-3 sm:p-4">
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                     <h3 className="text-sm font-semibold text-white">{event.type}</h3>
-                    <time className="font-mono text-xs text-indigo-200">
+                    <time className="font-mono text-xs text-primary">
                       {relativeTime(event.offsetMinutes)}
                     </time>
                   </div>

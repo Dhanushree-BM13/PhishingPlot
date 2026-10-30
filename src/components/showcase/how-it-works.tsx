@@ -29,7 +29,7 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
             <h3 className="mt-2 text-lg font-semibold">{incident.subject}</h3>
             <p className="mt-1 break-all text-sm text-slate-400">{incident.sender}</p>
           </div>
-          <Badge className="border-rose-300/25 bg-rose-400/10 text-rose-200">
+          <Badge className="border-status-invalid/25 bg-status-invalid/10 text-status-invalid">
             <ShieldAlert className="mr-1 size-3" aria-hidden="true" />
             {incident.risk.toUpperCase()} risk
           </Badge>
@@ -47,7 +47,7 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
             <ul className="mt-2 space-y-1">
               {incident.authChecks.map((check) => (
                 <li
-                  className="flex items-center gap-2 text-xs font-medium text-emerald-200"
+                  className="flex items-center gap-2 text-xs font-medium text-status-valid"
                   key={check.name}
                 >
                   <Check className="size-3" aria-hidden="true" />
@@ -66,10 +66,10 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
           <p className="mt-3 text-sm text-slate-400">{incident.bankDetailChangeText}</p>
         </div>
 
-        <Alert className="mt-4 border-rose-300/25 bg-rose-400/8 text-rose-100">
+        <Alert className="mt-4 border-status-invalid/25 bg-status-invalid/8 text-status-invalid">
           <AlertTriangle className="size-4" aria-hidden="true" />
           <AlertTitle>{incident.banner}</AlertTitle>
-          <AlertDescription className="text-rose-100/75">
+          <AlertDescription className="text-status-invalid/75">
             {formatLabel(incident.trustDiscountState)} trust discount ·{" "}
             {verdict.level.toUpperCase()} sender-behavior verdict
           </AlertDescription>
@@ -88,7 +88,7 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
             <p className="font-mono text-xs text-slate-500">{incident.id}</p>
             <h3 className="mt-2 text-lg font-semibold">Local link observation timeline</h3>
           </div>
-          <Badge className="border-amber-300/25 bg-amber-300/10 text-amber-100">
+          <Badge className="border-status-escalated/25 bg-status-escalated/10 text-status-escalated">
             <Clock3 className="mr-1 size-3" aria-hidden="true" />
             {linkObservationFixture.timelineLabel}
           </Badge>
@@ -105,7 +105,9 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
               <p className="font-mono text-xs text-slate-500">{observation.observedAt}</p>
               <p
                 className={`mt-2 text-sm font-semibold capitalize ${
-                  observation.localReputation === "clean" ? "text-emerald-200" : "text-rose-200"
+                  observation.localReputation === "clean"
+                    ? "text-status-valid"
+                    : "text-status-invalid"
                 }`}
               >
                 {observation.localReputation}
@@ -114,29 +116,29 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
             </div>
           ))}
         </div>
-        <div className="my-4 flex items-center justify-center text-amber-200">
+        <div className="my-4 flex items-center justify-center text-status-escalated">
           <ArrowDownRight className="size-5" aria-hidden="true" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/5 p-4">
+          <div className="rounded-xl border border-status-valid/20 bg-status-valid/5 p-4">
             <p className="text-xs text-slate-400">Approval before re-check</p>
-            <p className="mt-2 font-medium capitalize text-emerald-200">
+            <p className="mt-2 font-medium capitalize text-status-valid">
               {formatLabel(linkObservationFixture.initialApprovalState)}
             </p>
           </div>
-          <div className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-4">
+          <div className="rounded-xl border border-status-invalid/20 bg-status-invalid/5 p-4">
             <p className="text-xs text-slate-400">Approval after re-check</p>
-            <p className="mt-2 font-medium capitalize text-rose-200">
+            <p className="mt-2 font-medium capitalize text-status-invalid">
               {formatLabel(linkObservationFixture.finalApprovalState)}
             </p>
           </div>
         </div>
-        <Alert className="mt-4 border-amber-300/25 bg-amber-300/5 text-amber-100">
+        <Alert className="mt-4 border-status-escalated/25 bg-status-escalated/5 text-status-escalated">
           <Link2 className="size-4" aria-hidden="true" />
           <AlertTitle>
             {formatLabel(incident.status)} · approval is no longer valid for this evidence
           </AlertTitle>
-          <AlertDescription className="break-all text-amber-100/75">
+          <AlertDescription className="break-all text-status-escalated/75">
             {linkObservationFixture.invalidatedMessage}
           </AlertDescription>
         </Alert>
@@ -156,7 +158,7 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
           <p className="font-mono text-xs text-slate-500">{incident.id}</p>
           <h3 className="mt-2 text-lg font-semibold">Separate verdicts, visible disagreement</h3>
         </div>
-        <Badge className="border-amber-300/25 bg-amber-300/10 text-amber-100">
+        <Badge className="border-status-escalated/25 bg-status-escalated/10 text-status-escalated">
           {formatLabel(incident.status)}
         </Badge>
       </div>
@@ -169,7 +171,7 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
             <p className="font-mono text-xs text-slate-500">{verdict.analyzerId}</p>
             <p
               className={`mt-2 text-sm font-semibold ${
-                verdict.level === "high" ? "text-rose-200" : "text-emerald-200"
+                verdict.level === "high" ? "text-status-invalid" : "text-status-valid"
               }`}
             >
               {verdict.level.toUpperCase()}
@@ -179,10 +181,10 @@ function ScenarioPanel({ activeStep }: { activeStep: number }) {
           </div>
         ))}
       </div>
-      <Alert className="mt-4 border-amber-300/25 bg-amber-300/5 text-amber-100">
+      <Alert className="mt-4 border-status-escalated/25 bg-status-escalated/5 text-status-escalated">
         <AlertTriangle className="size-4" aria-hidden="true" />
         <AlertTitle>{incident.disagreementMessage}</AlertTitle>
-        <AlertDescription className="text-amber-100/75">
+        <AlertDescription className="text-status-escalated/75">
           Approval stays disabled until the analyst writes a justification of at least{" "}
           {incident.minimumJustificationLength} characters.
         </AlertDescription>
@@ -254,9 +256,7 @@ export default function HowItWorks() {
       }`}
     >
       <div className="mb-10 max-w-3xl">
-        <Badge className="border-indigo-300/25 bg-indigo-300/8 text-indigo-200">
-          {demoDataLabel}
-        </Badge>
+        <Badge className="border-primary/25 bg-primary/8 text-primary">{demoDataLabel}</Badge>
         <h2 className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
           How it works
         </h2>
@@ -289,7 +289,7 @@ export default function HowItWorks() {
                 isInView ? "is-visible" : ""
               } ${
                 activeStep === index
-                  ? "border-indigo-300/30 bg-indigo-300/[0.06]"
+                  ? "border-primary/30 bg-primary/[0.06]"
                   : "border-white/8 bg-white/[0.02]"
               }`}
               data-step-index={index}
@@ -304,13 +304,13 @@ export default function HowItWorks() {
               ref={setStepRef(index)}
               style={{ transitionDelay: `${index * 70}ms` }}
             >
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-indigo-200">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
                 {step.eyebrow}
               </p>
               <h3 className="mt-3 text-xl font-semibold text-white">{step.title}</h3>
               <p className="mt-3 text-sm leading-6 text-slate-400">{step.description}</p>
               <Button
-                className="mt-4 h-auto px-0 text-indigo-200 hover:bg-transparent hover:text-indigo-100"
+                className="mt-4 h-auto px-0 text-primary hover:bg-transparent hover:text-primary"
                 onClick={() => setActiveStep(index)}
                 variant="ghost"
               >
@@ -318,7 +318,7 @@ export default function HowItWorks() {
               </Button>
               <Button
                 asChild
-                className="mt-4 ml-3 h-auto px-0 text-indigo-200 hover:bg-transparent hover:text-indigo-100"
+                className="mt-4 ml-3 h-auto px-0 text-primary hover:bg-transparent hover:text-primary"
                 variant="link"
               >
                 <Link to="/dashboard" search={{ scenario: step.id }}>

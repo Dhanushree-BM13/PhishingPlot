@@ -178,10 +178,10 @@ function Investigation() {
     result?.riskScore === undefined
       ? "text-foreground"
       : result.riskScore >= 75
-        ? "text-rose-300"
+        ? "text-status-invalid"
         : result.riskScore >= 40
-          ? "text-amber-300"
-          : "text-emerald-300";
+          ? "text-status-escalated"
+          : "text-status-valid";
 
   return (
     <div className="cg-page space-y-5">
@@ -198,7 +198,7 @@ function Investigation() {
         <Card className="cg-panel">
           <CardHeader className="border-b border-white/5">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <ScanSearch aria-hidden="true" className="size-4 text-cyan-300" />
+              <ScanSearch aria-hidden="true" className="size-4 text-primary" />
               Message evidence
             </CardTitle>
           </CardHeader>
@@ -296,7 +296,7 @@ function Investigation() {
           <CardContent className="p-5">
             {!result ? (
               <div className="flex min-h-52 flex-col items-center justify-center text-center">
-                <ShieldCheck aria-hidden="true" className="size-9 text-cyan-300/70" />
+                <ShieldCheck aria-hidden="true" className="size-9 text-primary/70" />
                 <p className="mt-3 text-sm font-medium">Ready for analyst review</p>
                 <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
                   Load a fictional sample or provide message details to see findings.
@@ -337,7 +337,7 @@ function Investigation() {
 
                 {backendError && (
                   <p
-                    className="rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-xs text-amber-100"
+                    className="rounded-lg border border-status-escalated/20 bg-status-escalated/5 p-3 text-xs text-status-escalated"
                     role="status"
                   >
                     <AlertTriangle aria-hidden="true" className="mr-2 inline size-3.5" />
@@ -354,14 +354,14 @@ function Investigation() {
                         <li className="flex items-center gap-2 text-sm" key={indicator}>
                           <AlertTriangle
                             aria-hidden="true"
-                            className="size-3.5 shrink-0 text-amber-300"
+                            className="size-3.5 shrink-0 text-status-escalated"
                           />
                           {indicator}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="mt-2 flex items-center gap-2 text-sm text-emerald-200">
+                    <p className="mt-2 flex items-center gap-2 text-sm text-status-valid">
                       <Check aria-hidden="true" className="size-4" />
                       No demo indicators matched.
                     </p>
@@ -373,7 +373,7 @@ function Investigation() {
                   </h2>
                   <ul className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
                     {result.evidence.map((item) => (
-                      <li className="border-l border-cyan-300/30 pl-3" key={item}>
+                      <li className="border-l border-primary/30 pl-3" key={item}>
                         {item}
                       </li>
                     ))}
@@ -392,7 +392,7 @@ function Investigation() {
         <ActionApprovals actions={result.recommendedActions} />
       )}
       <p className="text-xs leading-relaxed text-muted-foreground">
-        <AlertTriangle aria-hidden="true" className="mr-1 inline size-3.5 text-amber-300" />
+        <AlertTriangle aria-hidden="true" className="mr-1 inline size-3.5 text-status-escalated" />
         {resultSource === "backend"
           ? "Agents use transparent, offline rules over synthetic logs. Links are never opened and no response action is executed."
           : "Local results use simple deterministic rules, not an AI model or URL reputation feed. Treat results as a UI demonstration, not security guidance."}

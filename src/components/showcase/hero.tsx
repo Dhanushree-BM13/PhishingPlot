@@ -1,121 +1,150 @@
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowRight, Check, CircleAlert, Shield, ShieldCheck } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, Loader2, ShieldAlert } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { CountUp } from "@/components/dashboard/live-widgets";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { useDemoStore } from "@/lib/store";
+import { useReducedMotion } from "@/lib/motion";
 
-export function ShowcaseHero() {
-  const { demoDataLabel, demoIncidents, senderBaselineFixture } = useDemoStore();
-  const incident = demoIncidents.trustedSender;
+const steps = [
+  { agent: "Triage", finding: "Password request · urgency · 1 link" },
+  { agent: "Investigation", finding: "passwrd-reset-secure.example · lookalike" },
+  { agent: "Logs", finding: "j.rao clicked, then signed in from new IP" },
+  { agent: "Risk review", finding: "3 of 3 evidence sources agree" },
+  { agent: "Response", finding: "Quarantine · block domain · reset password" },
+];
+
+const STEP_MS = 900;
+
+function LiveRun() {
+  const reducedMotion = useReducedMotion();
+  const [done, setDone] = useState(reducedMotion ? steps.length : 0);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      setDone(steps.length);
+      return;
+    }
+    const interval = window.setInterval(
+      () => setDone((current) => (current >= steps.length + 3 ? 0 : current + 1)),
+      STEP_MS,
+    );
+    return () => window.clearInterval(interval);
+  }, [reducedMotion]);
+
+  const finished = done >= steps.length;
 
   return (
-    <section className="px-4 pb-14 pt-10 sm:px-8 sm:pb-20 sm:pt-14">
-      <div className="mx-auto max-w-5xl">
-        <div className="max-w-3xl">
-          <Badge className="gap-1.5 border-status-analysis/30 bg-status-analysis/10 text-status-analysis">
-            <Shield aria-hidden="true" className="size-3.5" />
-            Offline analyst workspace
-          </Badge>
-          <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-6xl">
-            Phishing triage that stays suspicious of trusted senders
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-            Deterministic, offline analysis for phishing incidents. Analysts review every verdict,
-            every disagreement and every approval that expires.
-          </p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Button asChild>
-              <Link search={{ scenario: undefined }} to="/dashboard">
-                Open dashboard <ArrowRight aria-hidden="true" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <a href="#how">
-                View demo scenarios <ArrowDown aria-hidden="true" />
-              </a>
-            </Button>
-            <Button asChild className="px-0" variant="link">
-              <Link to="/hurdle/trusted-sender">Read the Trusted Sender hurdle</Link>
-            </Button>
-          </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            No live threat scanning. No response actions are executed.
+    <div className="hero-run cg-panel">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <span className="font-mono text-xs text-muted-foreground">
+          INC-2041 · it-support@company-helpdesk.example
+        </span>
+        <span className="cg-live-indicator">
+          <span /> Live run
+        </span>
+      </div>
+      <ol className="divide-y divide-border">
+        {steps.map((step, index) => {
+          const state = index < done ? "done" : index === done ? "running" : "queued";
+          return (
+            <li
+              className={`hero-step is-${state} flex items-center gap-3 px-4 py-3`}
+              key={step.agent}
+            >
+              <span className="hero-step-icon">
+                {state === "done" ? (
+                  <Check aria-hidden="true" className="size-3.5" />
+                ) : state === "running" ? (
+                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                ) : (
+                  <span className="size-1.5 rounded-full bg-current" />
+                )}
+              </span>
+              <span className="w-28 shrink-0 text-sm font-semibold">{step.agent}</span>
+              <span className="truncate font-mono text-xs text-muted-foreground">
+                {state === "done" ? step.finding : state === "running" ? "working…" : ""}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-4">
+        <div>
+          <p className="cg-eyebrow">Verdict</p>
+          <p className={`hero-verdict ${finished ? "is-shown" : ""}`}>
+            {finished ? <CountUp value={95} duration={600} /> : "—"}
+            <span>/100</span>
           </p>
         </div>
+        <div className="flex flex-col items-end gap-2">
+          <span className={`guide-pill is-bad ${finished ? "" : "opacity-30"}`}>
+            <ShieldAlert aria-hidden="true" className="size-3" /> Critical
+          </span>
+          <span className={`guide-pill is-warn ${finished ? "" : "opacity-30"}`}>
+            Awaiting analyst approval
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        <Card className="mt-10 overflow-hidden rounded-md border-border bg-card shadow-none">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <ShieldCheck aria-hidden="true" className="size-4 text-status-analysis" />
-              Analyst workspace preview
+const stats = [
+  { value: 4, suffix: "", label: "specialist agents per incident" },
+  { value: 3, suffix: "", label: "hurdle traps handled" },
+  { value: 0, suffix: "", label: "actions run without approval" },
+  { value: 100, suffix: "%", label: "of decisions audited" },
+];
+
+export function ShowcaseHero() {
+  return (
+    <section className="hero-bg border-b border-border">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:pb-24 lg:pt-20">
+        <div>
+          <p className="cg-eyebrow">Agentic phishing incident response</p>
+          <h1 className="hero-title mt-4">
+            The phish came from someone you trust.
+            <span> We still caught it.</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
+            PhishPilot sends every reported email through four AI agents, scores it with evidence
+            you can read, and waits for an analyst before anything happens.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Button asChild className="cg-primary-button h-11 px-5">
+              <Link to="/investigation">
+                Analyze an email <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+            <Button asChild className="h-11 px-5" variant="outline">
+              <Link search={{ scenario: undefined }} to="/dashboard">
+                Open the console
+              </Link>
+            </Button>
+            <a
+              className="ml-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              href="#how"
+            >
+              How it works <ArrowDown aria-hidden="true" className="size-3.5" />
+            </a>
+          </div>
+        </div>
+        <LiveRun />
+      </div>
+      <div className="border-t border-border">
+        <dl className="mx-auto grid max-w-6xl grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <div className="border-border px-5 py-6 [&:not(:last-child)]:border-r" key={stat.label}>
+              <dt className="sr-only">{stat.label}</dt>
+              <dd className="font-display text-4xl font-bold tracking-tight tabular-nums">
+                <CountUp value={stat.value} />
+                {stat.suffix}
+              </dd>
+              <dd className="mt-1 text-sm text-muted-foreground">{stat.label}</dd>
             </div>
-            <Badge className="gap-1.5 border-status-analysis/30 bg-status-analysis/10 text-status-analysis">
-              <CircleAlert aria-hidden="true" className="size-3" />
-              {demoDataLabel}
-            </Badge>
-          </div>
-          <div className="grid gap-4 p-4 md:grid-cols-[1.3fr_0.7fr] md:p-5">
-            <Card className="rounded-sm border-border bg-background p-4 shadow-none">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-mono text-xs text-muted-foreground">{incident.id}</p>
-                  <h2 className="mt-2 text-base font-semibold">{incident.subject}</h2>
-                  <p className="mt-1 break-all text-sm text-muted-foreground">{incident.sender}</p>
-                </div>
-                <Badge className="border-status-invalid/30 bg-status-invalid/10 text-status-invalid">
-                  <CircleAlert aria-hidden="true" className="mr-1 size-3" />
-                  {incident.risk.toUpperCase()} risk
-                </Badge>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="border-l-2 border-border pl-3">
-                  <p className="text-xs text-muted-foreground">Prior benign emails</p>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
-                    {senderBaselineFixture.sampleSize}
-                  </p>
-                </div>
-                <div className="border-l-2 border-border pl-3">
-                  <p className="text-xs text-muted-foreground">Incident status</p>
-                  <p className="mt-2 text-sm font-medium capitalize">{incident.status}</p>
-                </div>
-              </div>
-              <ul className="mt-4 flex flex-wrap gap-2">
-                {incident.authChecks.map((check) => (
-                  <li
-                    className="inline-flex items-center gap-1.5 rounded-sm border border-status-valid/30 px-2 py-1 text-xs text-status-valid"
-                    key={check.name}
-                  >
-                    <Check aria-hidden="true" className="size-3" />
-                    {check.name}: {check.status}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            <Card className="rounded-sm border-border bg-background p-4 shadow-none">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Shield aria-hidden="true" className="size-4 text-status-analysis" />
-                Trusted sender behavior
-              </div>
-              <div className="mt-4 border-l-2 border-status-invalid px-3 py-2">
-                <p className="text-sm font-semibold">{incident.banner}</p>
-                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  A familiar sender can still behave unusually. This is a local demo fixture, not a
-                  live scan.
-                </p>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs">
-                <span className="text-muted-foreground">New link domain</span>
-                <span className="break-all font-mono">{incident.newLinkDomain}</span>
-              </div>
-            </Card>
-          </div>
-          <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
-            Approval records a decision only. No external action is executed.
-          </div>
-        </Card>
+          ))}
+        </dl>
       </div>
     </section>
   );
