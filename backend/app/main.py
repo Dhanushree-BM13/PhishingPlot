@@ -12,12 +12,15 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from .agents import AGENT_NAMES, analyze_incident, email_record_from_raw
 from .clock import as_utc, utc_now
+from .orchestrator import run_investigation
 from .supabase_rest import SupabaseRest
 
 app = FastAPI(title="PHISHPILOT Incident API", version="1.0.0")
 origins = [
     origin.strip()
-    for origin in os.environ.get("FRONTEND_ORIGINS", "http://localhost:5173").split(",")
+    for origin in os.environ.get(
+        "FRONTEND_ORIGINS", "http://localhost:5173,http://localhost:8080"
+    ).split(",")
     if origin.strip()
 ]
 app.add_middleware(
@@ -45,6 +48,13 @@ class IncidentSubmission(BaseModel):
 
 class ApprovalDecision(BaseModel):
     decision: Literal["approved", "rejected"]
+
+
+class AnalyzeRequest(BaseModel):
+    subject: str = Field(min_length=1, max_length=500)
+    sender: str = Field(min_length=3, max_length=320)
+    body: str = Field(min_length=1, max_length=100_000)
+    urls: list[str] = Field(default_factory=list, max_length=50)
 
 
 async def authenticated(
@@ -90,6 +100,22 @@ def _incident(row: dict[str, Any]) -> dict[str, Any]:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/health")
+async def api_health() -> dict[str, str]:
+    return {"status": "ok", "version": app.version}
+
+
+@app.post("/api/analyze")
+async def api_analyze(
+    request: AnalyzeRequest,
+    now: datetime = Depends(utc_now),
+) -> dict[str, Any]:
+    """Stateless multi-agent investigation; nothing is stored, fetched or executed."""
+    return run_investigation(
+        request.subject, request.sender, request.body, request.urls, now=now
+    )
 
 
 @app.get("/incidents")

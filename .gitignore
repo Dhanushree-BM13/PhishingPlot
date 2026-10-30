@@ -25,6 +25,9 @@ backend/.env
 .wrangler/
 .dev.vars
 
+# Vercel
+.vercel/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -35,3 +38,8 @@ backend/.env
 *.njsproj
 *.sln
 *.sw?
+
+# Python / local tooling
+__pycache__/
+.pytest_cache/
+.claude/

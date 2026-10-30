@@ -15,8 +15,10 @@ export const trustedSenderCaseFixture = {
       { text: "Following up in our existing remittance thread." },
       { text: "Please use the new portal for the next invoice: " },
       { text: "https://remittance-update.example/portal", emphasis: "link" },
-      { text: "Our bank details have changed. Please update them before processing." ,
-        emphasis: "bank-detail" },
+      {
+        text: "Our bank details have changed. Please update them before processing.",
+        emphasis: "bank-detail",
+      },
     ],
   },
   signals: [

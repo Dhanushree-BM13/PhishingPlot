@@ -2,7 +2,9 @@ import { useState } from "react";
 import {
   Activity,
   BellRing,
+  Bot,
   ChevronLeft,
+  ClipboardCheck,
   ClipboardList,
   Clock3,
   Command,
@@ -10,10 +12,13 @@ import {
   LayoutDashboard,
   Link2,
   Menu,
+  Network,
   PanelLeftClose,
   PanelLeftOpen,
+  ScanSearch,
   Settings,
   Shield,
+  BookOpenCheck,
   UserRound,
 } from "lucide-react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
@@ -29,18 +34,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { BackendStatus } from "@/components/cyberguard/backend-status";
 import { useDemoStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const primaryNavigation = [
   { to: "/dashboard", title: "Dashboard", icon: LayoutDashboard },
+  { to: "/investigation", title: "Investigate email", icon: ScanSearch },
   { to: "/incidents", title: "Incidents", icon: ClipboardList },
+  { to: "/agents", title: "AI agent network", icon: Network },
+  { to: "/approvals", title: "Approval queue", icon: ClipboardCheck },
   { to: "/alerts", title: "Alerts", icon: BellRing },
   { to: "/audit", title: "Audit", icon: FileClock },
   { to: "/settings", title: "Settings", icon: Settings },
 ] as const;
 
 const scenarioNavigation = [
+  { kind: "hurdle", to: "/hurdle-guide", title: "Hurdle guide", icon: BookOpenCheck },
   { kind: "hurdle", to: "/hurdle/trusted-sender", title: "Trusted sender turns", icon: Shield },
   {
     kind: "incident",
@@ -57,13 +67,17 @@ const scenarioNavigation = [
 ] as const;
 
 const routeTitles: Record<string, string> = {
-  "/": "PHISHPILOT",
+  "/": "PhishPilot",
   "/dashboard": "Dashboard",
+  "/investigation": "Phishing investigation",
   "/incidents": "Incidents",
+  "/agents": "AI agent network",
+  "/approvals": "Human approval queue",
   "/alerts": "Alerts",
   "/audit": "Audit log",
   "/settings": "Settings",
   "/hurdle/trusted-sender": "Trusted sender turns",
+  "/hurdle-guide": "Hurdle guide",
 };
 
 function dashboardLinkProps() {
@@ -158,12 +172,16 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         )}
       >
         <Link
-          aria-label="PHISHPILOT dashboard"
+          aria-label="PhishPilot dashboard"
           className="inline-flex items-center gap-2"
           {...dashboardLinkProps()}
         >
-          <Shield aria-hidden="true" className="size-5 text-foreground" />
-          {!collapsed && <span className="text-sm font-semibold tracking-wide">PHISHPILOT</span>}
+          <Shield aria-hidden="true" className="size-5 text-cyan-300" />
+          {!collapsed && (
+            <span className="text-sm font-bold tracking-[0.12em]">
+              PHISH<span className="text-cyan-300">PILOT</span>
+            </span>
+          )}
         </Link>
         {!collapsed && (
           <Button aria-label="Collapse sidebar" onClick={onToggle} size="icon" variant="ghost">
@@ -182,7 +200,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
           <PanelLeftOpen aria-hidden="true" className="size-4" />
         </Button>
       )}
-      <nav aria-label="Primary navigation" className="flex-1 space-y-1 p-3">
+      <nav aria-label="Primary navigation" className="flex-1 space-y-1 overflow-y-auto p-3">
         {primaryNavigation.map(({ to, title, icon }) => (
           <NavigationLink
             active={path === to || path.startsWith(`${to}/`)}
@@ -278,7 +296,7 @@ function MobileNavigation() {
         </SheetTrigger>
         <SheetContent aria-describedby={undefined} side="bottom">
           <SheetHeader>
-            <SheetTitle>PHISHPILOT navigation</SheetTitle>
+            <SheetTitle>PhishPilot navigation</SheetTitle>
           </SheetHeader>
           <div className="mt-4 grid gap-1">
             {primaryNavigation.slice(3).map(({ to, title, icon: Icon }) => (
@@ -353,10 +371,10 @@ export function AppShell() {
   const { demoDataLabel, simulatedTime } = useDemoStore();
   const title =
     routeTitles[pathname] ??
-    (pathname.startsWith("/incidents/") ? "Incident detail" : "PHISHPILOT");
+    (pathname.startsWith("/incidents/") ? "Incident detail" : "PhishPilot");
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="cg-shell min-h-screen bg-background text-foreground">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
       <div
         className={cn(
@@ -366,14 +384,17 @@ export function AppShell() {
       >
         <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur md:px-6">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{title}</p>
-            <p className="text-xs text-muted-foreground">Demo analyst · Offline analysis</p>
+            <p className="truncate text-sm font-semibold tracking-wide">{title}</p>
+            <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">
+              Agentic phishing response
+            </p>
           </div>
-          <Badge className="gap-1.5 border-status-analysis/30 bg-status-analysis/10 text-status-analysis">
+          <BackendStatus compact />
+          <Badge className="hidden gap-1.5 border-status-analysis/30 bg-status-analysis/10 text-status-analysis sm:inline-flex">
             <Activity aria-hidden="true" className="size-3" />
             {demoDataLabel}
           </Badge>
-          <time className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:block">
+          <time className="hidden font-mono text-xs tabular-nums text-muted-foreground lg:block">
             {new Intl.DateTimeFormat("en", {
               dateStyle: "medium",
               timeStyle: "short",

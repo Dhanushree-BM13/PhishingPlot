@@ -11,10 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConsoleRouteImport } from './routes/_console'
+import { Route as ConsoleAgentsRouteImport } from './routes/_console.agents'
 import { Route as ConsoleAlertsRouteImport } from './routes/_console.alerts'
+import { Route as ConsoleApprovalsRouteImport } from './routes/_console.approvals'
 import { Route as ConsoleAuditRouteImport } from './routes/_console.audit'
 import { Route as ConsoleDashboardRouteImport } from './routes/_console.dashboard'
+import { Route as ConsoleHurdleGuideRouteImport } from './routes/_console.hurdle-guide'
 import { Route as ConsoleIncidentsRouteImport } from './routes/_console.incidents'
+import { Route as ConsoleInvestigationRouteImport } from './routes/_console.investigation'
 import { Route as ConsoleSettingsRouteImport } from './routes/_console.settings'
 import { Route as ConsoleHurdleTrustedSenderRouteImport } from './routes/_console.hurdle.trusted-sender'
 import { Route as ConsoleIncidentsIndexRouteImport } from './routes/_console.incidents.index'
@@ -29,9 +33,19 @@ const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsoleAgentsRoute = ConsoleAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleAlertsRoute = ConsoleAlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleApprovalsRoute = ConsoleApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleAuditRoute = ConsoleAuditRouteImport.update({
@@ -44,9 +58,19 @@ const ConsoleDashboardRoute = ConsoleDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleHurdleGuideRoute = ConsoleHurdleGuideRouteImport.update({
+  id: '/hurdle-guide',
+  path: '/hurdle-guide',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleIncidentsRoute = ConsoleIncidentsRouteImport.update({
   id: '/incidents',
   path: '/incidents',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleInvestigationRoute = ConsoleInvestigationRouteImport.update({
+  id: '/investigation',
+  path: '/investigation',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleSettingsRoute = ConsoleSettingsRouteImport.update({
@@ -73,10 +97,14 @@ const ConsoleIncidentsIdRoute = ConsoleIncidentsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agents': typeof ConsoleAgentsRoute
   '/alerts': typeof ConsoleAlertsRoute
+  '/approvals': typeof ConsoleApprovalsRoute
   '/audit': typeof ConsoleAuditRoute
   '/dashboard': typeof ConsoleDashboardRoute
+  '/hurdle-guide': typeof ConsoleHurdleGuideRoute
   '/incidents': typeof ConsoleIncidentsRouteWithChildren
+  '/investigation': typeof ConsoleInvestigationRoute
   '/settings': typeof ConsoleSettingsRoute
   '/hurdle/trusted-sender': typeof ConsoleHurdleTrustedSenderRoute
   '/incidents/$id': typeof ConsoleIncidentsIdRoute
@@ -84,9 +112,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agents': typeof ConsoleAgentsRoute
   '/alerts': typeof ConsoleAlertsRoute
+  '/approvals': typeof ConsoleApprovalsRoute
   '/audit': typeof ConsoleAuditRoute
   '/dashboard': typeof ConsoleDashboardRoute
+  '/hurdle-guide': typeof ConsoleHurdleGuideRoute
+  '/investigation': typeof ConsoleInvestigationRoute
   '/settings': typeof ConsoleSettingsRoute
   '/hurdle/trusted-sender': typeof ConsoleHurdleTrustedSenderRoute
   '/incidents/$id': typeof ConsoleIncidentsIdRoute
@@ -96,10 +128,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_console': typeof ConsoleRouteWithChildren
+  '/_console/agents': typeof ConsoleAgentsRoute
   '/_console/alerts': typeof ConsoleAlertsRoute
+  '/_console/approvals': typeof ConsoleApprovalsRoute
   '/_console/audit': typeof ConsoleAuditRoute
   '/_console/dashboard': typeof ConsoleDashboardRoute
+  '/_console/hurdle-guide': typeof ConsoleHurdleGuideRoute
   '/_console/incidents': typeof ConsoleIncidentsRouteWithChildren
+  '/_console/investigation': typeof ConsoleInvestigationRoute
   '/_console/settings': typeof ConsoleSettingsRoute
   '/_console/hurdle/trusted-sender': typeof ConsoleHurdleTrustedSenderRoute
   '/_console/incidents/$id': typeof ConsoleIncidentsIdRoute
@@ -109,10 +145,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agents'
     | '/alerts'
+    | '/approvals'
     | '/audit'
     | '/dashboard'
+    | '/hurdle-guide'
     | '/incidents'
+    | '/investigation'
     | '/settings'
     | '/hurdle/trusted-sender'
     | '/incidents/$id'
@@ -120,9 +160,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agents'
     | '/alerts'
+    | '/approvals'
     | '/audit'
     | '/dashboard'
+    | '/hurdle-guide'
+    | '/investigation'
     | '/settings'
     | '/hurdle/trusted-sender'
     | '/incidents/$id'
@@ -131,10 +175,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_console'
+    | '/_console/agents'
     | '/_console/alerts'
+    | '/_console/approvals'
     | '/_console/audit'
     | '/_console/dashboard'
+    | '/_console/hurdle-guide'
     | '/_console/incidents'
+    | '/_console/investigation'
     | '/_console/settings'
     | '/_console/hurdle/trusted-sender'
     | '/_console/incidents/$id'
@@ -162,11 +210,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_console/agents': {
+      id: '/_console/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof ConsoleAgentsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/alerts': {
       id: '/_console/alerts'
       path: '/alerts'
       fullPath: '/alerts'
       preLoaderRoute: typeof ConsoleAlertsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/approvals': {
+      id: '/_console/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ConsoleApprovalsRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/audit': {
@@ -183,11 +245,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleDashboardRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/hurdle-guide': {
+      id: '/_console/hurdle-guide'
+      path: '/hurdle-guide'
+      fullPath: '/hurdle-guide'
+      preLoaderRoute: typeof ConsoleHurdleGuideRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/incidents': {
       id: '/_console/incidents'
       path: '/incidents'
       fullPath: '/incidents'
       preLoaderRoute: typeof ConsoleIncidentsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/investigation': {
+      id: '/_console/investigation'
+      path: '/investigation'
+      fullPath: '/investigation'
+      preLoaderRoute: typeof ConsoleInvestigationRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/settings': {
@@ -235,19 +311,27 @@ const ConsoleIncidentsRouteWithChildren =
   ConsoleIncidentsRoute._addFileChildren(ConsoleIncidentsRouteChildren)
 
 interface ConsoleRouteChildren {
+  ConsoleAgentsRoute: typeof ConsoleAgentsRoute
   ConsoleAlertsRoute: typeof ConsoleAlertsRoute
+  ConsoleApprovalsRoute: typeof ConsoleApprovalsRoute
   ConsoleAuditRoute: typeof ConsoleAuditRoute
   ConsoleDashboardRoute: typeof ConsoleDashboardRoute
+  ConsoleHurdleGuideRoute: typeof ConsoleHurdleGuideRoute
   ConsoleIncidentsRoute: typeof ConsoleIncidentsRouteWithChildren
+  ConsoleInvestigationRoute: typeof ConsoleInvestigationRoute
   ConsoleSettingsRoute: typeof ConsoleSettingsRoute
   ConsoleHurdleTrustedSenderRoute: typeof ConsoleHurdleTrustedSenderRoute
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
+  ConsoleAgentsRoute: ConsoleAgentsRoute,
   ConsoleAlertsRoute: ConsoleAlertsRoute,
+  ConsoleApprovalsRoute: ConsoleApprovalsRoute,
   ConsoleAuditRoute: ConsoleAuditRoute,
   ConsoleDashboardRoute: ConsoleDashboardRoute,
+  ConsoleHurdleGuideRoute: ConsoleHurdleGuideRoute,
   ConsoleIncidentsRoute: ConsoleIncidentsRouteWithChildren,
+  ConsoleInvestigationRoute: ConsoleInvestigationRoute,
   ConsoleSettingsRoute: ConsoleSettingsRoute,
   ConsoleHurdleTrustedSenderRoute: ConsoleHurdleTrustedSenderRoute,
 }
